@@ -22,6 +22,7 @@
       --blue:    #0017C1;  /* 強調・主ボタン */
       --red:     #CE0000;  /* 削除系 */
       --on-blue: #FFFFFF;  /* 青の上の文字 */
+      --img-aspect: 0.75;  /* 幅/高さ。選んだリサイズ比率に合わせてJSから書き換える */
 
       --font: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
 
@@ -204,7 +205,7 @@
       height: 100%;
       color: var(--ink);
       font-weight: 700;
-      font-size: 1.7rem;
+      font-size: 3.4rem;
     }
 
     .card {
@@ -227,7 +228,7 @@
       display: block;
       width: 100%;
       max-height: 42vh;
-      aspect-ratio: 3 / 4;
+      aspect-ratio: var(--img-aspect);
       object-fit: contain;
       border-radius: 8px;
       background: var(--surface);
@@ -276,7 +277,7 @@
     .item img {
       display: block;
       width: 100%;
-      aspect-ratio: 3 / 4;
+      aspect-ratio: var(--img-aspect);
       object-fit: cover;
       border-radius: 6px;
     }
@@ -295,6 +296,30 @@
       font-size: .8rem;
       text-align: center;
     }
+
+    .lock-btn {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      z-index: 2;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: 50%;
+      background: var(--surface);
+      color: var(--ink);
+      font-size: .9rem;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, .3);
+    }
+    .lock-btn.on { background: var(--blue); color: var(--on-blue); }
+    .lock-btn:disabled { opacity: .4; cursor: default; }
+    .item.locked { border-color: var(--blue); }
 
     .item-actions {
       display: grid;
@@ -318,7 +343,7 @@
 
     @media (max-width: 480px) {
       .duel { gap: 6px; }
-      .vs { font-size: 1.2rem; }
+      .vs { font-size: 2.4rem; }
     }
     @media (prefers-reduced-motion: reduce) {
       .card { transition: none; }
@@ -528,8 +553,8 @@
     </div>
 
     <div class="arena-actions">
-      <button class="btn" id="tieBtn">同じくらい</button>
       <button class="btn" id="undoBtn" disabled>Undo</button>
+      <button class="btn" id="tieBtn">同じくらい</button>
       <button class="btn" id="powerBtn">強さを隠す</button>
     </div>
   </section>
@@ -570,8 +595,12 @@
         <h3>順位を手動で入れ替える</h3>
         <p>一覧の「←」「→」ボタンで、隣の順位の画像とちょうど入れ替えられます。強さの数値がほぼ同じで、どちらが上でも大差ないと感じる場合の微調整に使います。両端の画像では、その方向のボタンは押せません。</p>
 
+        <h3>順位のロック</h3>
+        <p>一覧の各画像の右上にある鍵のアイコンで、順位を固定できます。ロックできるのは、そのときの最上位か最下位の画像だけで、上から順に、または下から順にしか固定できません。ロック中の画像は二択にも自動の出題にも出ず、比較や集中比較、順位の入れ替えの対象にもなりません。</p>
+        <p>ロックを外せるのも、固定した範囲のうちいちばん内側（未ロックの画像に近い側）の1枚だけです。まん中から先に外すことはできません。</p>
+
         <h3>画像の全初期化・削除</h3>
-        <p>「全初期化」は、画像はすべて残したまま、全員のレートと比較の記録だけを消して新規追加と同じ状態に戻します。「削除」は画像ごと消します。いずれも誤操作を防ぐため、続けて2回押すと実行されます。</p>
+        <p>「全初期化」は、画像はすべて残したまま、全員のレートと比較の記録だけを消して新規追加と同じ状態に戻します。ロックもすべて外れます。「削除」は画像ごと消します。いずれも誤操作を防ぐため、続けて2回押すと実行されます。</p>
 
         <h3>タイトル</h3>
         <p>見出しの下の欄に好きな言葉を入れると、「○○ランキング」という名前がこのランキングに付きます。この名前は、保存ファイルやTier表シートのファイル名、Tier表シート自体の見出しに使われます。空欄のままでも構いません。</p>
@@ -609,6 +638,11 @@ const RESIZE_RATIOS  = { "4:3": 3 / 4, "1:1": 1, "3:4": 4 / 3 };
 const RESIZE_DEFAULT = "4:3";
 const IMAGE_HEIGHT   = 640;   // 保存する画像の高さ(px)。幅はここで選んだ比率から決まる
 const currentAspect  = () => RESIZE_RATIOS[state.resizeRatio] || RESIZE_RATIOS[RESIZE_DEFAULT];
+
+/* 比較画面・一覧の画像の枠を、今選ばれているリサイズ比率に合わせる */
+function applyImageAspectCSS() {
+  document.documentElement.style.setProperty("--img-aspect", currentAspect());
+}
 const Q = Math.LN10 / 400;    // Glicko の定数
 const SAMPLE_DIR     = "samples/";  // サンプル画像のフォルダ。中の samples.json に一覧を書く
 
@@ -619,7 +653,7 @@ const SAMPLE_DIR     = "samples/";  // サンプル画像のフォルダ。中�
    t    : これまでの比較の総数（時間の代わりに使う）
    hist : Undo 用の履歴 { a, b, res, before }
    ================================================================== */
-const emptyState = () => ({ version: 3, names: {}, ratings: {}, t: 0, hist: [], title: "", resizeRatio: RESIZE_DEFAULT });
+const emptyState = () => ({ version: 3, names: {}, ratings: {}, t: 0, hist: [], title: "", resizeRatio: RESIZE_DEFAULT, lockedTop: [], lockedBottom: [] });
 
 let state     = emptyState();
 let pair      = null;   // いま表示している2枚 [左, 右]
@@ -631,6 +665,8 @@ const urls    = {};     // 画像id → 表示用URL
 
 const $ = id => document.getElementById(id);
 const allIds = () => Object.keys(state.ratings);
+const isLocked = id => state.lockedTop.includes(id) || state.lockedBottom.includes(id);
+const unlockedIds = () => allIds().filter(id => !isLocked(id));
 const pickRandom = list => list[Math.floor(Math.random() * list.length)];
 const pairKey = (a, b) => (a < b ? a + "|" + b : b + "|" + a);
 const newId = () => "i" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -757,7 +793,8 @@ function applyResult(a, b, scoreA) {
    該当がなければ、レートが近い順に3枚を返す */
 function findOpponents(a, low, high, exclude = []) {
   const A = state.ratings[a];
-  const others = allIds().filter(b => b !== a && !exclude.includes(b) && pairKey(a, b) !== lastKey);
+  let others = unlockedIds().filter(b => b !== a && !exclude.includes(b) && pairKey(a, b) !== lastKey);
+  if (!others.length) others = unlockedIds().filter(b => b !== a); // 候補が尽きた場合は制約を緩めて必ず1枚は残す
   const inRange = others.filter(b => {
     const e = expectedWin(A.r, state.ratings[b].r);
     return e >= low && e <= high;
@@ -798,8 +835,8 @@ function pickFocusPair() {
 }
 
 function pickPair() {
-  const ids = allIds();
-  if (ids.length < 2) return null;
+  const ids = unlockedIds();
+  if (ids.length < 2) return null; // ロックされていない画像が2枚に満たない場合は比較できない
 
   if (focus && !state.ratings[focus.id]) focus = null; // 対象の画像が既に無い場合は集中比較をやめる
   if (focus) return pickFocusPair();
@@ -856,11 +893,13 @@ function answer(result) {
 
 /* 順位を1つだけ手動で入れ替える。dir は -1（前へ）か +1（後ろへ） */
 function moveRank(id, dir) {
+  if (isLocked(id)) return; // ロック中の画像は順位を動かせない
   const ranking = makeRanking();
   const pos = ranking.rank[id];
   const targetPos = pos + dir;
   if (targetPos < 0 || targetPos >= ranking.order.length) return;
   const otherId = ranking.order[targetPos];
+  if (isLocked(otherId)) return; // ロックの境界をまたぐ入れ替えはできない
 
   const before = { [id]: { ...state.ratings[id] }, [otherId]: { ...state.ratings[otherId] } };
   const swapR = state.ratings[id].r;
@@ -937,6 +976,8 @@ async function addImages(files) {
 function deleteImage(id) {
   delete state.ratings[id];
   delete state.names[id];
+  state.lockedTop = state.lockedTop.filter(x => x !== id);
+  state.lockedBottom = state.lockedBottom.filter(x => x !== id);
   state.hist = state.hist.filter(h => h.a !== id && h.b !== id);
   db("images", "readwrite", s => s.delete(id));
   if (urls[id]) URL.revokeObjectURL(urls[id]);
@@ -955,13 +996,55 @@ function resetAllRatings() {
     state.ratings[id] = { r: RATING_START, rd: RD_START, n: 0, p, last: state.t };
   }
   state.hist = [];
+  state.lockedTop = [];
+  state.lockedBottom = [];
   pair = null;
   focus = null;
   saveState();
   render();
 }
 
+/* 順位のロック・ロック解除。最上位/最下位から順に固定でき、外すときも
+   その内側の境界（固定と未固定の境目）の1枚からしか外せない */
+function toggleLock(id) {
+  if (state.lockedTop.length && state.lockedTop[state.lockedTop.length - 1] === id) {
+    state.lockedTop.pop();
+  } else if (state.lockedBottom.length && state.lockedBottom[0] === id) {
+    state.lockedBottom.shift();
+  } else if (!isLocked(id)) {
+    const ranking = makeRanking();
+    const pos = ranking.rank[id];
+    const firstUnlockedPos = state.lockedTop.length;
+    const lastUnlockedPos = ranking.order.length - state.lockedBottom.length - 1;
+    if (pos === firstUnlockedPos) state.lockedTop.push(id);
+    else if (pos === lastUnlockedPos) state.lockedBottom.unshift(id);
+    else return; // 最上位・最下位以外はロックできない
+  } else {
+    return; // ロック中だが内側の境界ではないので外せない
+  }
+  if (pair && pair.includes(id)) pair = null;
+  if (focus && focus.id === id) focus = null;
+  saveState();
+  render();
+}
+
+/* このidの今のロック状態から、アイコン・有効無効・説明文を決める */
+function lockInfo(id, ranking) {
+  const isTopEdge = state.lockedTop.length && state.lockedTop[state.lockedTop.length - 1] === id;
+  const isBottomEdge = state.lockedBottom.length && state.lockedBottom[0] === id;
+  if (isTopEdge || isBottomEdge) return { icon: "🔒", disabled: false, title: "ロックを外す" };
+  if (isLocked(id)) return { icon: "🔒", disabled: true, title: "内側の1枚からしか外せません" };
+
+  const pos = ranking.rank[id];
+  const firstUnlockedPos = state.lockedTop.length;
+  const lastUnlockedPos = ranking.order.length - state.lockedBottom.length - 1;
+  if (pos === firstUnlockedPos) return { icon: "🔓", disabled: false, title: "最上位としてロックする" };
+  if (pos === lastUnlockedPos) return { icon: "🔓", disabled: false, title: "最下位としてロックする" };
+  return { icon: "🔓", disabled: true, title: "最上位・最下位からしか順にロックできません" };
+}
+
 function startFocus(id) {
+  if (isLocked(id)) return; // ロック中の画像は比較の対象にならない
   focus = { id, left: FOCUS_N, used: [] };
   pair = null;
   render();
@@ -1112,6 +1195,7 @@ async function importData(file) {
   state.hist = state.hist || [];
   state.title = state.title || "";
   state.resizeRatio = state.resizeRatio || RESIZE_DEFAULT;
+  applyImageAspectCSS();
   cleanUpState();
   $("titleInput").value = state.title;
   document.title = state.title.trim() ? `${state.title.trim()}ランキング` : "二択式ランキングメーカー";
@@ -1130,6 +1214,8 @@ function cleanUpState() {
   for (const id of Object.keys(state.ratings)) {
     if (!(id in state.names)) delete state.ratings[id];
   }
+  state.lockedTop = (state.lockedTop || []).filter(id => state.ratings[id]);
+  state.lockedBottom = (state.lockedBottom || []).filter(id => state.ratings[id]);
   state.hist = state.hist.filter(h => state.ratings[h.a] && state.ratings[h.b]);
 }
 
@@ -1140,7 +1226,7 @@ function cleanUpState() {
    1枚のPNG画像を作る。強さなどの数値は入れず、画像と順位番号だけを載せる
    ================================================================== */
 const SHEET_COLS = 10;
-const SHEET_CELL_W = 140, SHEET_CELL_H = 187;
+const SHEET_CELL_W = 140; // 高さは、そのとき選ばれているリサイズ比率から決める（buildSheet内のcellH）
 const SHEET_LABEL_W = 110;
 const SHEET_LINE = "#3A3A3A";   // 行や列を仕切る線
 const SHEET_BG = "#000000";     // 背景
@@ -1166,10 +1252,11 @@ function drawCover(ctx, img, x, y, w, h) {
 const SHEET_TITLE_H = 64; // タイトルを入れたときの帯の高さ(px)
 
 async function buildSheet(order, title) {
-  const rowCount = Math.ceil(order.length / SHEET_COLS);
+  const cellH     = Math.round(SHEET_CELL_W / currentAspect()); // 今のリサイズ比率に合わせた1マスの高さ
+  const rowCount  = Math.ceil(order.length / SHEET_COLS);
   const width     = SHEET_LABEL_W + SHEET_COLS * SHEET_CELL_W;
   const titleH    = title ? SHEET_TITLE_H : 0;
-  const height    = titleH + rowCount * SHEET_CELL_H;
+  const height    = titleH + rowCount * cellH;
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -1188,17 +1275,17 @@ async function buildSheet(order, title) {
   }
 
   for (let row = 0; row < rowCount; row++) {
-    const y = titleH + row * SHEET_CELL_H;
+    const y = titleH + row * cellH;
     const rowEnd = (row + 1) * SHEET_COLS; // 最後の行が10枚に満たなくても10の倍数で表示する
 
     // 見出し（Tiermaker の左端のラベル欄と同じ位置づけ）。上から下へ虹色に変化させる
     ctx.fillStyle = rowLabelColor(row, rowCount);
-    ctx.fillRect(0, y, SHEET_LABEL_W, SHEET_CELL_H);
+    ctx.fillRect(0, y, SHEET_LABEL_W, cellH);
     ctx.fillStyle = "#FFFFFF";
     ctx.font = "bold 26px 'Zen Kaku Gothic New', sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(`Top${rowEnd}`, SHEET_LABEL_W / 2, y + SHEET_CELL_H / 2);
+    ctx.fillText(`Top${rowEnd}`, SHEET_LABEL_W / 2, y + cellH / 2);
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
 
@@ -1210,10 +1297,10 @@ async function buildSheet(order, title) {
 
       try {
         const img = await loadImageElement(urls[id]);
-        drawCover(ctx, img, x, y, SHEET_CELL_W, SHEET_CELL_H);
+        drawCover(ctx, img, x, y, SHEET_CELL_W, cellH);
       } catch (e) {
         ctx.fillStyle = "#2A2A2A";
-        ctx.fillRect(x, y, SHEET_CELL_W, SHEET_CELL_H);
+        ctx.fillRect(x, y, SHEET_CELL_W, cellH);
       }
 
       // 画像の左上に小さく順位番号
@@ -1230,7 +1317,7 @@ async function buildSheet(order, title) {
   ctx.strokeStyle = SHEET_LINE;
   ctx.lineWidth = 1;
   for (let row = 0; row <= rowCount; row++) {
-    const y = titleH + row * SHEET_CELL_H + 0.5;
+    const y = titleH + row * cellH + 0.5;
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
   }
   for (let col = 0; col <= SHEET_COLS; col++) {
@@ -1337,6 +1424,7 @@ function renderResizeMenu() {
     btn.textContent = (active ? "✓ " : "") + label;
     btn.addEventListener("click", () => {
       state.resizeRatio = label;
+      applyImageAspectCSS();
       saveState();
       $("resizeMenu").hidden = true;
     });
@@ -1370,7 +1458,8 @@ function showMessage(text) {
 function makeRanking() {
   const ids = allIds();
   const avg = mean(ids.map(id => state.ratings[id].r));
-  const order = [...ids].sort((x, y) => state.ratings[y].r - state.ratings[x].r);
+  const middle = unlockedIds().sort((x, y) => state.ratings[y].r - state.ratings[x].r);
+  const order = [...state.lockedTop, ...middle, ...state.lockedBottom];
   const rank = {};
   order.forEach((id, i) => { rank[id] = i; });
   const toPower = r => Math.round(100 * expectedWin(r, avg));
@@ -1410,6 +1499,7 @@ function renderStatus() {
   if (ids.length) {
     text = `登録 ${ids.length}件、比較 ${state.t}回`;
     if (placing) text += `、配置比較中 ${placing}件`;
+    if (ids.length >= 2 && unlockedIds().length < 2) text += "。すべてロック中のため比較はありません";
   }
   if (!storageOK) text += "。この環境では保存できないため、閉じると消えます";
   $("status").textContent = message || text;
@@ -1443,12 +1533,21 @@ function renderArena(ranking) {
 
 function makeListItem(id, index, ranking) {
   const item = state.ratings[id];
+  const locked = isLocked(id);
   const li = document.createElement("li");
-  li.className = "item" + (focus && focus.id === id ? " focused" : "");
+  li.className = "item" + (focus && focus.id === id ? " focused" : "") + (locked ? " locked" : "");
 
   const badge = document.createElement("div");
   badge.className = "rank";
   badge.textContent = index + 1;
+
+  const lock = lockInfo(id, ranking);
+  const lockBtn = document.createElement("button");
+  lockBtn.className = "lock-btn" + (lock.icon === "🔒" ? " on" : "");
+  lockBtn.textContent = lock.icon;
+  lockBtn.title = lock.title;
+  lockBtn.disabled = lock.disabled;
+  lockBtn.addEventListener("click", () => toggleLock(id));
 
   const img = document.createElement("img");
   img.src = urls[id] || "";
@@ -1468,6 +1567,8 @@ function makeListItem(id, index, ranking) {
 
   const focusBtn = document.createElement("button");
   focusBtn.textContent = "集中";
+  focusBtn.disabled = locked;
+  focusBtn.title = locked ? "ロック中は比較の対象になりません" : "";
   focusBtn.addEventListener("click", () => startFocus(id));
 
   const deleteBtn = document.createElement("button");
@@ -1479,18 +1580,18 @@ function makeListItem(id, index, ranking) {
   leftBtn.className = "move";
   leftBtn.textContent = "←";
   leftBtn.title = "ひとつ前の順位に入れ替える";
-  leftBtn.disabled = index === 0;
+  leftBtn.disabled = index === 0 || locked || isLocked(ranking.order[index - 1]);
   leftBtn.addEventListener("click", () => moveRank(id, -1));
 
   const rightBtn = document.createElement("button");
   rightBtn.className = "move";
   rightBtn.textContent = "→";
   rightBtn.title = "ひとつ後ろの順位に入れ替える";
-  rightBtn.disabled = index === ranking.order.length - 1;
+  rightBtn.disabled = index === ranking.order.length - 1 || locked || isLocked(ranking.order[index + 1]);
   rightBtn.addEventListener("click", () => moveRank(id, 1));
 
   actions.append(focusBtn, deleteBtn, leftBtn, rightBtn);
-  li.append(badge, img, name, meta, actions);
+  li.append(badge, lockBtn, img, name, meta, actions);
   return li;
 }
 
@@ -1627,6 +1728,8 @@ function migrateOldState(saved) {
   for (const rec of records) urls[rec.id] = URL.createObjectURL(rec.blob);
 
   cleanUpState();
+  state.resizeRatio = state.resizeRatio || RESIZE_DEFAULT;
+  applyImageAspectCSS();
   $("titleInput").value = state.title || "";
   if (state.title && state.title.trim()) document.title = `${state.title.trim()}ランキング`;
   saveState();
