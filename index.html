@@ -89,6 +89,28 @@
       font-size: 1.2rem;
     }
 
+    .title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 1rem;
+    }
+    .title-row label { color: var(--sub); }
+    .title-row input {
+      flex: 1;
+      max-width: 260px;
+      padding: 6px 10px;
+      border: 2px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--ink);
+      font: inherit;
+      font-weight: 700;
+    }
+    .title-row input:focus-visible { outline: 3px solid var(--blue); outline-offset: 1px; }
+    .title-row .title-suffix { color: var(--ink); }
+
     .toolbar {
       display: flex;
       flex-wrap: wrap;
@@ -162,6 +184,7 @@
       background: var(--bg);
       font-size: .95rem;
     }
+    .focusbar[hidden] { display: none; }
     .focusbar img { width: 38px; height: 50px; object-fit: cover; border-radius: 4px; }
 
     .duel {
@@ -173,7 +196,15 @@
       margin-top: 12px;
     }
 
-    .vs { color: var(--sub); font-size: 1.1rem; }
+    .vs {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--ink);
+      font-weight: 700;
+      font-size: 1.7rem;
+    }
 
     .card {
       display: flex;
@@ -285,7 +316,7 @@
 
     @media (max-width: 480px) {
       .duel { gap: 6px; }
-      .vs { font-size: .9rem; }
+      .vs { font-size: 1.2rem; }
     }
     @media (prefers-reduced-motion: reduce) {
       .card { transition: none; }
@@ -296,6 +327,7 @@
        サンプルの件数メニュー
        ================================================================ */
     .sample-picker { position: relative; display: inline-block; }
+    .sample-picker[hidden] { display: none; }
     .sample-menu {
       position: absolute;
       top: calc(100% + 6px);
@@ -397,6 +429,11 @@
 
   <header>
     <h1>二択式ランキングメーカー</h1>
+    <div class="title-row">
+      <label for="titleInput">タイトル</label>
+      <input type="text" id="titleInput" placeholder="例：漫画" maxlength="40">
+      <span class="title-suffix">ランキング</span>
+    </div>
     <div class="toolbar">
       <button class="btn" id="helpBtn">使い方</button>
       <button class="btn primary" id="addBtn">画像を追加</button>
@@ -411,6 +448,7 @@
         </div>
       </span>
       <button class="btn" id="sheetBtn">シート作成</button>
+      <button class="btn" id="resetAllRatingsBtn">全初期化</button>
       <button class="btn danger" id="resetBtn">すべて削除</button>
     </div>
   </header>
@@ -486,22 +524,26 @@
         <p>比較のたびに、双方の「強さ」という数値が動きます。強さは、平均的な画像と比べたときの予想勝率を0〜100で表したものです。数値の後ろの括弧は、その数値がどれくらいの幅で動きうるかを示しています。</p>
 
         <h3>集中比較</h3>
-        <p>順位一覧の「集中」を押すと、その画像を対象にした比較が10回続きます。前半6回はレートが少し離れた相手、後半4回は近い相手と比較するので、狭い範囲だけでなく幅広く順位を確かめられます。比較中は、対象の画像が常に左側に表示されます。</p>
+        <p>順位一覧の「集中」を押すと、その画像を対象にした比較が10回続きます。前半6回はレートが少し離れた相手、後半4回は近い相手と比較するので、狭い範囲だけでなく幅広く順位を確かめられます。比較中は、対象の画像が常に左側に表示されます。10回終わると「順位が暫定的に決まりました」という通知が出ます。</p>
+        <p>比較の途中でUndoを繰り返し、今の集中比較より前まで戻した場合は、その時点で集中比較は自動的に終わります。</p>
 
         <h3>順位を手動で入れ替える</h3>
         <p>一覧の「←」「→」ボタンで、隣の順位の画像とちょうど入れ替えられます。強さの数値がほぼ同じで、どちらが上でも大差ないと感じる場合の微調整に使います。両端の画像では、その方向のボタンは押せません。</p>
 
         <h3>画像の初期化・削除</h3>
-        <p>「初期化」は、画像は残したまま、レートと比較の記録だけを消して新規追加と同じ状態に戻します。「削除」は画像ごと消します。どちらも誤操作を防ぐため、続けて2回押すと実行されます。</p>
+        <p>「初期化」は、画像は残したまま、レートと比較の記録だけを消して新規追加と同じ状態に戻します。「全初期化」は、これを全員に対して一度に行います。「削除」は画像ごと消します。いずれも誤操作を防ぐため、続けて2回押すと実行されます。</p>
+
+        <h3>タイトル</h3>
+        <p>見出しの下の欄に好きな言葉を入れると、「○○ランキング」という名前がこのランキングに付きます。この名前は、保存ファイルやTier表シートのファイル名、Tier表シート自体の見出しに使われます。空欄のままでも構いません。</p>
 
         <h3>保存・読み込み</h3>
-        <p>「保存」で、画像と順位をまとめて1つのファイルに書き出せます。「読み込み」でそのファイルから復元できます。読み込みは今のデータを置き換えるので、データがあるときは確認のため2回押す必要があります。</p>
+        <p>「保存」で、画像と順位をまとめて1つのファイルに書き出せます。「読み込み」でそのファイルから復元できます。読み込みは今のデータを置き換えるので、データがあるときは確認のため2回押す必要があります。保存先を選べるブラウザでは、書き出す場所をその場で尋ねます。選べないブラウザでは、既定のダウンロード先に保存されます。</p>
 
         <h3>サンプル</h3>
         <p>あらかじめ用意された画像セットがある場合、「サンプル」ボタンが表示されます。押すと20枚・50枚・100枚から件数を選べるので、試したい枚数を選んでください。これも今のデータを置き換えます。</p>
 
         <h3>Tier表シートの書き出し</h3>
-        <p>「シート作成」で、現在の順位を10列に並べた1枚のPNG画像を書き出せます。各行の左には10位刻みの見出しが付き、1行目から最終行に向けて色が虹色に変わります。</p>
+        <p>「シート作成」で、現在の順位を10列に並べた1枚のPNG画像を書き出せます。各行の左には10位刻みの見出しが付き、1行目から最終行に向けて色が虹色に変わります。タイトルを入れている場合は、上部にその名前も入ります。</p>
 
       </div>
     </div>
@@ -534,7 +576,7 @@ const SAMPLE_DIR     = "samples/";  // サンプル画像のフォルダ。中�
    t    : これまでの比較の総数（時間の代わりに使う）
    hist : Undo 用の履歴 { a, b, res, before }
    ================================================================== */
-const emptyState = () => ({ version: 3, names: {}, ratings: {}, t: 0, hist: [] });
+const emptyState = () => ({ version: 3, names: {}, ratings: {}, t: 0, hist: [], title: "" });
 
 let state     = emptyState();
 let pair      = null;   // いま表示している2枚 [左, 右]
@@ -701,6 +743,11 @@ function pickFocusPair() {
     candidates = findOpponents(a, 0.4, 0.6, focus.used);
   }
 
+  // 画像の総数が少ないと、まだ対戦していない相手が10回に届く前に尽きることがある。
+  // その場合は範囲や重複の制約を緩めてでも、必ず1枚を選ぶ
+  if (!candidates.length) candidates = allIds().filter(b => b !== a && !focus.used.includes(b));
+  if (!candidates.length) candidates = allIds().filter(b => b !== a);
+
   const b = pickRandom(candidates);
   focus.used.push(b);
   return [a, b];
@@ -710,7 +757,8 @@ function pickPair() {
   const ids = allIds();
   if (ids.length < 2) return null;
 
-  if (focus && state.ratings[focus.id]) return pickFocusPair();
+  if (focus && !state.ratings[focus.id]) focus = null; // 対象の画像が既に無い場合は集中比較をやめる
+  if (focus) return pickFocusPair();
 
   // 配置比較が残っている画像を優先。相手は予想勝率20〜80%の幅広い範囲から
   const placing = ids.filter(id => state.ratings[id].p > 0);
@@ -750,13 +798,18 @@ function answer(result) {
     if (state.hist.length > HISTORY_MAX) state.hist.shift();
   }
 
+  let finishedFocusName = null;
   if (focus && pair.includes(focus.id)) {
     focus.left--;
-    if (focus.left <= 0) focus = null;
+    if (focus.left <= 0) {
+      finishedFocusName = state.names[focus.id] || "";
+      focus = null;
+    }
   }
   pair = null;
   saveState();
   render();
+  if (finishedFocusName !== null) showMessage(`「${finishedFocusName}」の順位が暫定的に決まりました`);
 }
 
 /* 順位を1つだけ手動で入れ替える。dir は -1（前へ）か +1（後ろへ） */
@@ -797,10 +850,15 @@ function undo() {
 
   if (state.ratings[last.a] && state.ratings[last.b]) {
     pair = [last.a, last.b];
-    if (focus && pair.includes(focus.id)) {
-      focus.left++;
-      focus.used.pop();
-      if (pair[0] !== focus.id) pair.reverse();
+    if (focus) {
+      if (pair.includes(focus.id)) {
+        focus.left++;
+        focus.used.pop();
+        if (pair[0] !== focus.id) pair.reverse();
+      } else {
+        // 今の集中比較より前の回答まで戻ってしまった場合は、ずれを残さず集中比較を終える
+        focus = null;
+      }
     }
   } else {
     pair = null;
@@ -847,6 +905,20 @@ function deleteImage(id) {
   render();
 }
 
+/* 全初期化：画像はすべて残し、全員のレートと比較記録だけを新規追加と同じ状態に戻す */
+function resetAllRatings() {
+  const ids = allIds();
+  const p = ids.length > 1 ? PLACEMENT_N : 0;
+  for (const id of ids) {
+    state.ratings[id] = { r: RATING_START, rd: RD_START, n: 0, p, last: state.t };
+  }
+  state.hist = [];
+  pair = null;
+  focus = null;
+  saveState();
+  render();
+}
+
 /* 初期化：画像は残し、レートと記録を新規追加と同じ状態に戻す */
 function resetImage(id) {
   const others = allIds().filter(x => x !== id);
@@ -877,6 +949,8 @@ async function deleteAll() {
   state = emptyState();
   pair = null;
   focus = null;
+  $("titleInput").value = "";
+  document.title = "二択式ランキングメーカー";
   await db("images", "readwrite", s => s.clear());
   saveState();
   render();
@@ -920,8 +994,26 @@ function dataURLToBlob(dataURL) {
   return new Blob([bytes], { type });
 }
 
-/* claude.ai 上では downloads 機能、通常のサイトではブラウザのダウンロードを使う */
+/* 保存場所を選べるブラウザ（File System Access API に対応したもの）ではその場で尋ね、
+   claude.ai 上では downloads 機能、それ以外では通常のダウンロードにフォールバックする */
 async function downloadFile(filename, blob) {
+  if (typeof window.showSaveFilePicker === "function") {
+    const ext = (filename.match(/\.([^.]+)$/) || [, ""])[1];
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: ext ? [{ description: ext.toUpperCase(), accept: { [blob.type || "application/octet-stream"]: ["." + ext] } }] : undefined,
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return;
+    } catch (e) {
+      if (e && e.name === "AbortError") { const err = new Error("cancelled"); err.code = "declined"; throw err; }
+      // 対応していないはずが失敗した場合は、下の方法にフォールバックする
+    }
+  }
+
   const claudeDownloads = window.claude && window.claude.use
     ? await window.claude.use("downloads").catch(() => null)
     : null;
@@ -938,6 +1030,15 @@ async function downloadFile(filename, blob) {
   setTimeout(() => URL.revokeObjectURL(link.href), 10000);
 }
 
+/* タイトルを反映したファイル名を作る。「タイトル未入力なら既定の名前」という扱い */
+function titledFilename(ext) {
+  const d = new Date(), pad = x => String(x).padStart(2, "0");
+  const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
+  const title = (state.title || "").trim();
+  const base = title ? `${title}ランキング` : "ranking";
+  return `${base}-${stamp}.${ext}`;
+}
+
 async function exportData() {
   if (!allIds().length) { showMessage("保存するデータがありません"); return; }
   showMessage("書き出し中…");
@@ -948,9 +1049,8 @@ async function exportData() {
     if (state.ratings[rec.id]) images[rec.id] = await blobToDataURL(rec.blob);
   }
 
-  const d = new Date(), pad = x => String(x).padStart(2, "0");
-  const filename = `ranking-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.json`;
-  const data = { app: "pairsort", savedAt: d.toISOString(), state, images };
+  const filename = titledFilename("json");
+  const data = { app: "pairsort", savedAt: new Date().toISOString(), state, images };
 
   try {
     await downloadFile(filename, new Blob([JSON.stringify(data)], { type: "application/json" }));
@@ -983,7 +1083,10 @@ async function importData(file) {
 
   state = data.state;
   state.hist = state.hist || [];
+  state.title = state.title || "";
   cleanUpState();
+  $("titleInput").value = state.title;
+  document.title = state.title.trim() ? `${state.title.trim()}ランキング` : "二択式ランキングメーカー";
   pair = null;
   focus = null;
   saveState();
@@ -1032,10 +1135,13 @@ function drawCover(ctx, img, x, y, w, h) {
   ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
 }
 
-async function buildSheet(order) {
+const SHEET_TITLE_H = 64; // タイトルを入れたときの帯の高さ(px)
+
+async function buildSheet(order, title) {
   const rowCount = Math.ceil(order.length / SHEET_COLS);
-  const width  = SHEET_LABEL_W + SHEET_COLS * SHEET_CELL_W;
-  const height = rowCount * SHEET_CELL_H;
+  const width     = SHEET_LABEL_W + SHEET_COLS * SHEET_CELL_W;
+  const titleH    = title ? SHEET_TITLE_H : 0;
+  const height    = titleH + rowCount * SHEET_CELL_H;
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -1044,8 +1150,17 @@ async function buildSheet(order) {
   ctx.fillStyle = SHEET_BG;
   ctx.fillRect(0, 0, width, height);
 
+  if (title) {
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 32px 'Zen Kaku Gothic New', sans-serif";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText(title, 20, titleH / 2);
+    ctx.textBaseline = "alphabetic";
+  }
+
   for (let row = 0; row < rowCount; row++) {
-    const y = row * SHEET_CELL_H;
+    const y = titleH + row * SHEET_CELL_H;
     const rowEnd = (row + 1) * SHEET_COLS; // 最後の行が10枚に満たなくても10の倍数で表示する
 
     // 見出し（Tiermaker の左端のラベル欄と同じ位置づけ）。上から下へ虹色に変化させる
@@ -1087,14 +1202,14 @@ async function buildSheet(order) {
   ctx.strokeStyle = SHEET_LINE;
   ctx.lineWidth = 1;
   for (let row = 0; row <= rowCount; row++) {
-    const y = row * SHEET_CELL_H + 0.5;
+    const y = titleH + row * SHEET_CELL_H + 0.5;
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
   }
   for (let col = 0; col <= SHEET_COLS; col++) {
     const x = SHEET_LABEL_W + col * SHEET_CELL_W + 0.5;
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x, titleH); ctx.lineTo(x, height); ctx.stroke();
   }
-  { const x = SHEET_LABEL_W + 0.5; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke(); }
+  { const x = SHEET_LABEL_W + 0.5; ctx.beginPath(); ctx.moveTo(x, titleH); ctx.lineTo(x, height); ctx.stroke(); }
 
   return new Promise(resolve => canvas.toBlob(resolve, "image/png"));
 }
@@ -1104,9 +1219,9 @@ async function exportSheets() {
   if (!ranking.order.length) { showMessage("画像がありません"); return; }
   showMessage("シートを作成中…");
 
-  const blob = await buildSheet(ranking.order);
-  const d = new Date(), pad = x => String(x).padStart(2, "0");
-  const filename = `tier-sheet-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}.png`;
+  const title = (state.title || "").trim();
+  const blob = await buildSheet(ranking.order, title ? `${title}ランキング` : "");
+  const filename = titledFilename("png");
   try {
     await downloadFile(filename, blob);
     showMessage("シートを書き出しました");
@@ -1341,6 +1456,7 @@ function renderList(ranking) {
 /* keepPair が true のときは、表示中の2枚を選び直さない */
 function render(keepPair = false) {
   if (!keepPair && (!pair || !pair.every(id => state.ratings[id]))) pair = pickPair();
+  if (focus && pair && !pair.includes(focus.id)) focus = null; // 表示中の2枚と食い違う集中比較は残さない
   const ranking = makeRanking();
 
   $("undoBtn").disabled = !state.hist.length;
@@ -1359,6 +1475,12 @@ $("helpBtn").addEventListener("click", () => { helpOverlay.hidden = false; });
 $("helpClose").addEventListener("click", () => { helpOverlay.hidden = true; });
 helpOverlay.addEventListener("click", e => { if (e.target === helpOverlay) helpOverlay.hidden = true; });
 
+$("titleInput").addEventListener("input", () => {
+  state.title = $("titleInput").value;
+  document.title = state.title.trim() ? `${state.title.trim()}ランキング` : "二択式ランキングメーカー";
+});
+$("titleInput").addEventListener("change", () => saveState());
+
 $("addBtn").addEventListener("click", () => $("imageInput").click());
 $("imageInput").addEventListener("change", e => { addImages(e.target.files); e.target.value = ""; });
 
@@ -1376,6 +1498,7 @@ $("importInput").addEventListener("change", e => {
 });
 
 confirmTwice($("resetBtn"), "もう一度押すと削除", deleteAll);
+confirmTwice($("resetAllRatingsBtn"), "もう一度押すと全初期化", resetAllRatings);
 
 
 $("leftCard").addEventListener("click",  () => answer(RESULT.LEFT));
@@ -1456,6 +1579,8 @@ function migrateOldState(saved) {
   for (const rec of records) urls[rec.id] = URL.createObjectURL(rec.blob);
 
   cleanUpState();
+  $("titleInput").value = state.title || "";
+  if (state.title && state.title.trim()) document.title = `${state.title.trim()}ランキング`;
   saveState();
   render();
   prepareSamples();
