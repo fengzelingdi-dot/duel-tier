@@ -247,12 +247,15 @@
     }
 
     .arena-actions {
-      display: flex;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: 8px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 10px;
       margin-top: 14px;
     }
+    .arena-actions #undoBtn  { justify-self: end; }
+    .arena-actions #tieBtn   { justify-self: center; }
+    .arena-actions #powerBtn { justify-self: start; }
 
     /* ================================================================
        順位一覧
@@ -345,11 +348,38 @@
     @media (max-width: 480px) {
       .duel { gap: 6px; }
       .vs { font-size: 2.4rem; }
+      .arena-actions { grid-template-columns: 1fr; justify-items: center; }
+      .arena-actions #undoBtn, .arena-actions #powerBtn { justify-self: center; }
     }
     @media (prefers-reduced-motion: reduce) {
       .card { transition: none; }
       .card:active { transform: none; }
     }
+
+    /* ================================================================
+       はっきりしたお知らせ（配置比較の完了など）を、画面上部に大きく出す
+       ================================================================ */
+    .toast {
+      position: fixed;
+      top: calc(16px + env(safe-area-inset-top, 0px));
+      left: 50%;
+      z-index: 200;
+      max-width: min(90vw, 420px);
+      padding: 14px 22px;
+      border-radius: 12px;
+      background: var(--blue);
+      color: var(--on-blue);
+      font-size: 1.05rem;
+      font-weight: 700;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .3);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(-50%) translateY(-14px);
+      transition: opacity .25s ease, transform .25s ease;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
 
     /* ================================================================
        2回押しの確認は、ボタンの文字を書き換えず、上に浮かぶ吹き出しで示す
@@ -562,6 +592,8 @@
 
   <h2 id="listTitle" hidden></h2>
   <ol class="list" id="list"></ol>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <div class="modal-overlay" id="helpOverlay" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
@@ -872,11 +904,16 @@ function answer(result) {
   const [left, right] = pair;
   lastKey = pairKey(left, right);
 
+  const placingBefore = allIds().filter(id => state.ratings[id].p > 0).length;
   const before = { [left]: { ...state.ratings[left] }, [right]: { ...state.ratings[right] } };
   const scoreLeft = result === RESULT.LEFT ? 1 : result === RESULT.RIGHT ? 0 : 0.5;
   applyResult(left, right, scoreLeft);
   state.hist.push({ a: left, b: right, res: result, before });
   if (state.hist.length > HISTORY_MAX) state.hist.shift();
+
+  // 配置比較が必要な画像がこの回答でちょうど無くなったか（1枚ごとではなく全体で）
+  const placingAfter = allIds().filter(id => state.ratings[id].p > 0).length;
+  const allPlacingDone = placingBefore > 0 && placingAfter === 0;
 
   let finishedFocusName = null;
   if (focus && pair.includes(focus.id)) {
@@ -889,7 +926,11 @@ function answer(result) {
   pair = null;
   saveState();
   render();
-  if (finishedFocusName !== null) showMessage(`「${finishedFocusName}」の順位が暫定的に決まりました`);
+
+  const notices = [];
+  if (allPlacingDone) notices.push("配置比較がすべて終わりました");
+  if (finishedFocusName !== null) notices.push(`「${finishedFocusName}」の順位が暫定的に決まりました`);
+  if (notices.length) showToast(notices.join("。"));
 }
 
 /* 順位を1つだけ手動で入れ替える。dir は -1（前へ）か +1（後ろへ） */
@@ -1453,6 +1494,21 @@ function showMessage(text) {
   render(true);
   clearTimeout(messageTimer);
   messageTimer = setTimeout(() => { message = ""; render(true); }, 3000);
+}
+
+/* 配置比較の完了など、見落としたくない知らせは、上部の小さな文字ではなく
+   はっきりしたポップアップで出す */
+let toastTimer = null;
+function showToast(text) {
+  const el = $("toast");
+  el.hidden = false;
+  el.textContent = text;
+  requestAnimationFrame(() => el.classList.add("show"));
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    el.classList.remove("show");
+    setTimeout(() => { el.hidden = true; }, 250);
+  }, 3500);
 }
 
 /* 強さ 0〜100 = 平均的なレートの相手への予想勝率 */
