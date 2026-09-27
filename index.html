@@ -291,6 +291,104 @@
       .card { transition: none; }
       .card:active { transform: none; }
     }
+
+    /* ================================================================
+       サンプルの件数メニュー
+       ================================================================ */
+    .sample-picker { position: relative; display: inline-block; }
+    .sample-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      z-index: 50;
+      min-width: 160px;
+      padding: 10px;
+      border: 2px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+    }
+    .sample-menu[hidden] { display: none; }
+    .sample-menu-note { margin: 0 0 8px; color: var(--red); font-size: .82rem; }
+    .sample-menu-options { display: flex; flex-direction: column; gap: 6px; }
+    .sample-menu-options button {
+      padding: 7px 10px;
+      border: 2px solid var(--line);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--ink);
+      font: inherit;
+      font-size: .9rem;
+      text-align: left;
+      cursor: pointer;
+    }
+    .sample-menu-options button:hover { border-color: var(--blue); }
+
+    /* ================================================================
+       使い方（ヘルプ）
+       ================================================================ */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(0, 0, 0, .55);
+    }
+    .modal-overlay[hidden] { display: none; }
+
+    .modal {
+      width: 100%;
+      max-width: 640px;
+      max-height: 85vh;
+      overflow-y: auto;
+      border-radius: 14px;
+      background: var(--surface);
+      color: var(--ink);
+      padding: 0 20px 20px;
+    }
+
+    .modal-head {
+      position: sticky;
+      top: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 0 10px;
+      margin-bottom: 6px;
+      background: var(--surface);
+      border-bottom: 2px solid var(--line);
+    }
+    .modal-head h2 { margin: 0; font-size: 1.3rem; }
+
+    .modal-close {
+      border: none;
+      background: none;
+      color: var(--ink);
+      font-size: 1.6rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 2px 6px;
+    }
+
+    .modal-body h3 {
+      margin: 20px 0 6px;
+      font-size: 1.05rem;
+      color: var(--blue);
+    }
+    .modal-body h3:first-child { margin-top: 8px; }
+    .modal-body p, .modal-body li { font-size: .95rem; line-height: 1.75; }
+    .modal-body ul { margin: 4px 0 0; padding-left: 1.2em; }
+    .modal-body kbd {
+      display: inline-block;
+      border: 2px solid var(--line);
+      border-radius: 6px;
+      padding: 0 6px;
+      font: inherit;
+      font-size: .85em;
+    }
   </style>
 </head>
 
@@ -300,11 +398,18 @@
   <header>
     <h1>二択式ランキングメーカー</h1>
     <div class="toolbar">
+      <button class="btn" id="helpBtn">使い方</button>
       <button class="btn primary" id="addBtn">画像を追加</button>
       <button class="btn" id="undoBtn" disabled>Undo</button>
       <button class="btn" id="exportBtn">保存</button>
       <button class="btn" id="importBtn">読み込み</button>
-      <button class="btn" id="sampleBtn" hidden>サンプル</button>
+      <span class="sample-picker" id="samplePicker" hidden>
+        <button class="btn" id="sampleBtn">サンプル</button>
+        <div class="sample-menu" id="sampleMenu" hidden>
+          <p class="sample-menu-note" id="sampleMenuNote" hidden>今のデータは消えます</p>
+          <div class="sample-menu-options" id="sampleMenuOptions"></div>
+        </div>
+      </span>
       <button class="btn" id="sheetBtn">シート作成</button>
       <button class="btn danger" id="resetBtn">すべて削除</button>
     </div>
@@ -355,6 +460,52 @@
 
   <h2 id="listTitle" hidden></h2>
   <ol class="list" id="list"></ol>
+
+  <div class="modal-overlay" id="helpOverlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <div class="modal-head">
+        <h2 id="helpTitle">使い方</h2>
+        <button class="modal-close" id="helpClose" aria-label="閉じる">×</button>
+      </div>
+      <div class="modal-body">
+
+        <h3>このツールについて</h3>
+        <p>画像と順位は、この端末のこのブラウザの中だけに保存されます。どこにも送信されません。別の端末やブラウザで開いた場合、データは引き継がれません。</p>
+
+        <h3>画像を追加する</h3>
+        <p>「画像を追加」から選ぶか、ページに画像をドラッグ＆ドロップします。追加した画像は、まず4回の「配置比較」を行い、幅広い相手と比べることで大まかな位置を決めます。</p>
+
+        <h3>二択で比較する</h3>
+        <p>好きなほうの画像を押して選びます。キーボードでも操作できます。</p>
+        <ul>
+          <li><kbd>←</kbd> / <kbd>→</kbd>：左または右を選ぶ</li>
+          <li><kbd>↓</kbd>：同じくらい（両方に半分ずつ点を入れる）</li>
+          <li><kbd>S</kbd>：スキップ（記録せずに次へ進む）</li>
+          <li><kbd>Z</kbd>：ひとつ前の回答を取り消す（Undo）</li>
+        </ul>
+        <p>比較のたびに、双方の「強さ」という数値が動きます。強さは、平均的な画像と比べたときの予想勝率を0〜100で表したものです。数値の後ろの括弧は、その数値がどれくらいの幅で動きうるかを示しています。</p>
+
+        <h3>集中比較</h3>
+        <p>順位一覧の「集中」を押すと、その画像を対象にした比較が10回続きます。前半6回はレートが少し離れた相手、後半4回は近い相手と比較するので、狭い範囲だけでなく幅広く順位を確かめられます。比較中は、対象の画像が常に左側に表示されます。</p>
+
+        <h3>順位を手動で入れ替える</h3>
+        <p>一覧の「←」「→」ボタンで、隣の順位の画像とちょうど入れ替えられます。強さの数値がほぼ同じで、どちらが上でも大差ないと感じる場合の微調整に使います。両端の画像では、その方向のボタンは押せません。</p>
+
+        <h3>画像の初期化・削除</h3>
+        <p>「初期化」は、画像は残したまま、レートと比較の記録だけを消して新規追加と同じ状態に戻します。「削除」は画像ごと消します。どちらも誤操作を防ぐため、続けて2回押すと実行されます。</p>
+
+        <h3>保存・読み込み</h3>
+        <p>「保存」で、画像と順位をまとめて1つのファイルに書き出せます。「読み込み」でそのファイルから復元できます。読み込みは今のデータを置き換えるので、データがあるときは確認のため2回押す必要があります。</p>
+
+        <h3>サンプル</h3>
+        <p>あらかじめ用意された画像セットがある場合、「サンプル」ボタンが表示されます。押すと20枚・50枚・100枚から件数を選べるので、試したい枚数を選んでください。これも今のデータを置き換えます。</p>
+
+        <h3>Tier表シートの書き出し</h3>
+        <p>「シート作成」で、現在の順位を10列に並べた1枚のPNG画像を書き出せます。各行の左には10位刻みの見出しが付き、1行目から最終行に向けて色が虹色に変わります。</p>
+
+      </div>
+    </div>
+  </div>
 
 </main>
 
@@ -970,6 +1121,7 @@ async function exportSheets() {
    一覧が読めないとき（claude.ai 上やファイル未配置のとき）はボタンを出さない
    ================================================================== */
 let sampleList = [];
+const SAMPLE_TIERS = [20, 50, 100]; // ここに用意した件数の段階を書く
 
 async function prepareSamples() {
   try {
@@ -978,17 +1130,35 @@ async function prepareSamples() {
     const list = await res.json();
     if (Array.isArray(list) && list.length) {
       sampleList = list;
-      $("sampleBtn").hidden = false;
+      $("samplePicker").hidden = false;
     }
   } catch (e) {
     // サンプルなしで動かす
   }
 }
 
-async function loadSamples() {
+/* サンプルの件数メニューを、用意されている枚数に合わせて作る。
+   20・50・100のうち、実際にその枚数以上が用意されているものだけを出す */
+function renderSampleMenu() {
+  const tiers = SAMPLE_TIERS.filter(n => n <= sampleList.length);
+
+  const box = $("sampleMenuOptions");
+  box.textContent = "";
+  tiers.forEach(n => {
+    const btn = document.createElement("button");
+    btn.textContent = `${n}枚`;
+    btn.addEventListener("click", () => { $("sampleMenu").hidden = true; loadSamples(n); });
+    box.append(btn);
+  });
+
+  $("sampleMenuNote").hidden = !allIds().length;
+}
+
+async function loadSamples(count) {
   showMessage("サンプルを読み込み中…");
+  const entries = sampleList.slice(0, count);
   const files = [];
-  for (const entry of sampleList) {
+  for (const entry of entries) {
     try {
       const res = await fetch(SAMPLE_DIR + entry.file);
       if (!res.ok) continue;
@@ -1003,6 +1173,15 @@ async function loadSamples() {
   await deleteAll();
   await addImages(files);
 }
+
+$("sampleBtn").addEventListener("click", () => {
+  const menu = $("sampleMenu");
+  if (menu.hidden) renderSampleMenu();
+  menu.hidden = !menu.hidden;
+});
+document.addEventListener("click", e => {
+  if (!$("samplePicker").contains(e.target)) $("sampleMenu").hidden = true;
+});
 
 /* ==================================================================
    画面の描画
@@ -1175,6 +1354,11 @@ function render(keepPair = false) {
 /* ==================================================================
    イベント
    ================================================================== */
+const helpOverlay = $("helpOverlay");
+$("helpBtn").addEventListener("click", () => { helpOverlay.hidden = false; });
+$("helpClose").addEventListener("click", () => { helpOverlay.hidden = true; });
+helpOverlay.addEventListener("click", e => { if (e.target === helpOverlay) helpOverlay.hidden = true; });
+
 $("addBtn").addEventListener("click", () => $("imageInput").click());
 $("imageInput").addEventListener("change", e => { addImages(e.target.files); e.target.value = ""; });
 
@@ -1193,9 +1377,6 @@ $("importInput").addEventListener("change", e => {
 
 confirmTwice($("resetBtn"), "もう一度押すと削除", deleteAll);
 
-// サンプルは今のデータを置き換えるので、データがあるときだけ確認をはさむ
-confirmTwice($("sampleBtn"), "今のデータは消えます。もう一度押す", loadSamples, 4000,
-  () => allIds().length === 0);
 
 $("leftCard").addEventListener("click",  () => answer(RESULT.LEFT));
 $("rightCard").addEventListener("click", () => answer(RESULT.RIGHT));
@@ -1205,6 +1386,7 @@ $("powerBtn").addEventListener("click",  () => { showPower = !showPower; render(
 
 document.addEventListener("keydown", e => {
   if (e.target.tagName === "INPUT") return;
+  if (!helpOverlay.hidden) { if (e.key === "Escape") helpOverlay.hidden = true; return; }
   const key = e.key;
   if (pair && key === "ArrowLeft")  { e.preventDefault(); answer(RESULT.LEFT); }
   else if (pair && key === "ArrowRight") { e.preventDefault(); answer(RESULT.RIGHT); }
