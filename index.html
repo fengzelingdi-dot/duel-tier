@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>二択ランキング</title>
+<meta name="description" content="画像を二択で比べ続けて、レートで好きな順位を作るツール。画像はブラウザ内だけに保存されます。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F6;--panel:#FFFFFF;--ink:#1C2230;--sub:#5B6478;--line:#D5DBE6;--accent:#2F54D6;--accent-ink:#FFFFFF;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#141820;--panel:#1D2230;--ink:#E7EAF2;--sub:#9AA3B8;--line:#2E3547;--accent:#7C95FF;--accent-ink:#0E1220}
+}
+:root[data-theme="dark"]{--bg:#141820;--panel:#1D2230;--ink:#E7EAF2;--sub:#9AA3B8;--line:#2E3547;--accent:#7C95FF;--accent-ink:#0E1220}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;line-height:1.6}
+main{max-width:960px;margin:0 auto;padding:20px 16px 48px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-size:1.35rem;margin:0}
+h2{font-size:1.05rem;margin:28px 0 0}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:inherit;font-size:.9rem;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:7px 14px;border-radius:8px;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+.btn.warn{color:#C0392B}
+.btn:disabled{opacity:.45;cursor:default}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.note{color:var(--sub);font-size:.85rem;margin:6px 0 0}
+.arena{margin-top:20px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+.arena-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;color:var(--sub);font-size:.9rem}
+.duel{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;margin-top:12px}
+.card{appearance:none;border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:8px;cursor:pointer;color:var(--ink);font:inherit;display:flex;flex-direction:column;gap:6px;align-items:center;min-width:0;transition:border-color .15s,transform .08s}
+.card:hover{border-color:var(--accent)}
+.card:active{transform:scale(.98)}
+.card img{width:100%;aspect-ratio:3/4;object-fit:contain;border-radius:8px;background:var(--panel);display:block}
+.card span{font-size:.9rem;overflow-wrap:anywhere;text-align:center}
+.vs{font-weight:700;color:var(--sub)}
+.subacts{display:flex;justify-content:center;gap:8px;margin-top:12px}
+.meta{font-size:.72rem;color:var(--sub)}
+.pw{font-size:.8rem;color:var(--sub)}
+.focusbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding:8px 10px;border-radius:10px;background:var(--bg);border:1px solid var(--accent);font-size:.88rem}
+.focusbar img{width:36px;height:48px;object-fit:cover;border-radius:4px}
+.focusbar .grow{flex:1;min-width:8em}
+.focusbar button{font:inherit;font-size:.8rem;padding:3px 10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;cursor:pointer}
+.item.focused{outline:2px solid var(--accent);outline-offset:1px}
+.list{list-style:none;padding:0;margin:12px 0 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px}
+.item{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px;position:relative;min-width:0}
+.item img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:6px;display:block}
+.rank{position:absolute;top:4px;left:4px;background:var(--accent);color:var(--accent-ink);font-weight:700;min-width:28px;text-align:center;border-radius:6px;padding:0 6px;font-size:.9rem}
+.name{font-size:.82rem;margin-top:4px;overflow-wrap:anywhere}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.acts .wide{grid-column:1 / -1}
+.acts button{flex:1;font:inherit;font-size:.72rem;padding:3px 2px;border:1px solid var(--line);background:transparent;color:var(--sub);border-radius:6px;cursor:pointer}
+.empty{margin-top:20px;border:2px dashed var(--line);border-radius:14px;padding:40px 16px;text-align:center;color:var(--sub)}
+body.dragging .empty,body.dragging main{outline:3px dashed var(--accent);outline-offset:4px}
+@media (max-width:480px){.duel{gap:6px}.vs{font-size:.8rem}}
+@media (prefers-reduced-motion:reduce){.card{transition:none}.card:active{transform:none}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>二択ランキング</h1>
+    <div class="tools">
+      <button class="btn primary" id="addBtn">画像を追加</button>
+      <button class="btn" id="undoBtn" disabled>1手戻す</button>
+      <button class="btn" id="exportBtn">保存</button>
+      <button class="btn" id="importBtn">読み込み</button>
+      <button class="btn warn" id="resetBtn">すべて削除</button>
+    </div>
+  </header>
+  <p class="note" id="status"></p>
+  <input type="file" id="file" accept="image/*" multiple hidden>
+  <input type="file" id="importFile" accept=".json,application/json" hidden>
+  <p class="note">画像と順位はこのブラウザの中だけに保存され、どこにも送信されません。「保存」で画像と順位をまとめて1つのファイルに書き出し、「読み込み」で復元できます。</p>
+
+  <section class="arena" id="arena" hidden>
+    <div class="arena-top"><span>好きなほうを選んでください。← → で選択、↓ で同じくらい、S でスキップ、Z で戻す</span><span id="remain"></span></div>
+    <div class="focusbar" id="focusbar" hidden><img alt=""><span class="grow"></span></div>
+    <div class="duel">
+      <button class="card" id="left"><img alt=""><span></span><small class="pw"></small></button>
+      <div class="vs">VS</div>
+      <button class="card" id="right"><img alt=""><span></span><small class="pw"></small></button>
+    </div>
+    <div class="subacts">
+      <button class="btn" id="tieBtn">同じくらい</button>
+      <button class="btn" id="skipBtn">スキップ</button>
+      <button class="btn" id="pwBtn">強さを隠す</button>
+    </div>
+  </section>
+
+  <div class="empty" id="empty" hidden>画像を選ぶか、ここにドラッグ＆ドロップすると二択が始まります。<br>新しい画像はまず6回の配置比較で大まかな位置を決め、その後はレートで順位が変わっていきます。</div>
+
+  <h2 id="listTitle" hidden></h2>
+  <ol class="list" id="list"></ol>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+/* 状態
+  ratings[id] = {r: レート, rd: 信頼幅, n: 比較回数, p: 残りの配置比較回数, last: 最後に比較した時点 t}
+  t: これまでの比較の総数（時間の代わり）
+  hist: 1手戻す用。{a, b, res, before: {a: {...}, b: {...}}}  */
+const blank = () => ({version: 3, names: {}, ratings: {}, t: 0, hist: []});
+let state = blank();
+const urls = {};
+let storageOK = true;
+
+// Glicko 方式のパラメータ
+const Q = Math.LN10 / 400, RD0 = 350, RDMIN = 50, C = 25, PLACE_N = 6, HIST_MAX = 300;
+const FOCUS_N = 10, FAR_N = 6;
+
+const dbp = new Promise(res => {
+  try {
+    const r = indexedDB.open('pairsort', 1);
+    r.onupgradeneeded = () => { const d = r.result; d.createObjectStore('images', {keyPath: 'id'}); d.createObjectStore('kv'); };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => res(null);
+  } catch (e) { res(null); }
+});
+async function idb(store, mode, fn) {
+  const d = await dbp;
+  if (!d) { storageOK = false; return undefined; }
+  return new Promise(res => {
+    try {
+      const t = d.transaction(store, mode); const q = fn(t.objectStore(store)); let out;
+      if (q) q.onsuccess = () => { out = q.result; };
+      t.oncomplete = () => res(out);
+      t.onerror = () => { storageOK = false; res(undefined); };
+    } catch (e) { storageOK = false; res(undefined); }
+  });
+}
+const save = () => idb('kv', 'readwrite', s => s.put(JSON.parse(JSON.stringify(state)), 'state'));
+const uid = () => 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const ids = () => Object.keys(state.ratings);
+const rnd = a => a[Math.floor(Math.random() * a.length)];
+
+async function shrink(file) {
+  try {
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(1, 640 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+    g.drawImage(bmp, 0, 0, c.width, c.height);
+    return await new Promise(r => c.toBlob(b => r(b || file), 'image/jpeg', 0.88));
+  } catch (e) { return file; }
+}
+
+// ---- Glicko ----
+// しばらく比較されていない画像は信頼幅が広がる。1期間 = 各画像が平均して1回比較されるまでの比較数
+function rdNow(x) {
+  const period = Math.max(1, ids().length / 2);
+  return Math.min(RD0, Math.sqrt(x.rd * x.rd + C * C * (state.t - x.last) / period));
+}
+const g = rd => 1 / Math.sqrt(1 + 3 * Q * Q * rd * rd / (Math.PI * Math.PI));
+const expect = (ra, rb) => 1 / (1 + Math.pow(10, -(ra - rb) / 400)); // 単純な予想勝率
+function update(a, b, sa) { // sa: a の得点 1, 0.5, 0
+  const A = state.ratings[a], B = state.ratings[b];
+  const rdA = rdNow(A), rdB = rdNow(B);
+  const one = (r, rd, ro, rdo, s) => {
+    const gg = g(rdo), E = 1 / (1 + Math.pow(10, -gg * (r - ro) / 400));
+    const d2 = 1 / (Q * Q * gg * gg * E * (1 - E));
+    const denom = 1 / (rd * rd) + 1 / d2;
+    return {r: r + Q / denom * gg * (s - E), rd: Math.max(RDMIN, Math.sqrt(1 / denom))};
+  };
+  const na = one(A.r, rdA, B.r, rdB, sa), nb = one(B.r, rdB, A.r, rdA, 1 - sa);
+  for (const [X, nx] of [[A, na], [B, nb]]) {
+    X.r = nx.r; X.rd = nx.rd; X.n++; X.last = state.t + 1; if (X.p > 0) X.p--;
+  }
+  state.t++;
+}
+
+// ---- 出題 ----
+let pair = null, lastKey = '', focus = null, showPw = true;
+const key = (a, b) => a < b ? a + '|' + b : b + '|' + a;
+
+// 対象 a に対し、予想勝率が [lo, hi] に入る相手を探す。見つからなければレートが近い順に候補を返す
+function opponents(a, lo, hi, exclude = []) {
+  const A = state.ratings[a];
+  const others = ids().filter(b => b !== a && !exclude.includes(b) && key(a, b) !== lastKey);
+  const hit = others.filter(b => { const e = expect(A.r, state.ratings[b].r); return e >= lo && e <= hi; });
+  if (hit.length) return hit;
+  return others.sort((x, y) => Math.abs(state.ratings[x].r - A.r) - Math.abs(state.ratings[y].r - A.r)).slice(0, 3);
+}
+
+function pickPair() {
+  const all = ids(); if (all.length < 2) return null;
+  // 集中比較：前半はレートが少し離れた相手（予想勝率 15〜35% か 65〜85%）、後半は近い相手（40〜60%）
+  if (focus && state.ratings[focus.id]) {
+    const done = FOCUS_N - focus.left, a = focus.id;
+    let cand;
+    if (done < FAR_N) {
+      const up = opponents(a, .15, .35, focus.used), down = opponents(a, .65, .85, focus.used);
+      const A = state.ratings[a];
+      const realUp = up.filter(b => state.ratings[b].r > A.r), realDown = down.filter(b => state.ratings[b].r < A.r);
+      // 上と下を交互に。片側がなければもう片側
+      cand = (done % 2 === 0 ? (realUp.length ? realUp : realDown) : (realDown.length ? realDown : realUp));
+      if (!cand.length) cand = up;
+    } else cand = opponents(a, .4, .6, focus.used);
+    const b = rnd(cand); focus.used.push(b);
+    return [a, b];
+  }
+  // 配置比較が残っている画像を優先。相手は予想勝率 20〜80% の幅広い範囲から
+  const placing = all.filter(id => state.ratings[id].p > 0);
+  if (placing.length && all.length - placing.length >= 1) {
+    const a = rnd(placing);
+    const pool = opponents(a, .2, .8).filter(b => state.ratings[b].p === 0);
+    const b = pool.length ? rnd(pool) : rnd(opponents(a, .2, .8));
+    return Math.random() < .5 ? [a, b] : [b, a];
+  }
+  // 通常：信頼幅の二乗に比例する確率で対象を選び、相手は予想勝率 30〜70% からランダム
+  const w = all.map(id => { const x = rdNow(state.ratings[id]); return x * x; });
+  let u = Math.random() * w.reduce((s, x) => s + x, 0), a = all[0];
+  for (let i = 0; i < all.length; i++) { u -= w[i]; if (u <= 0) { a = all[i]; break; } }
+  const b = rnd(opponents(a, .3, .7));
+  return Math.random() < .5 ? [a, b] : [b, a];
+}
+
+function record(res) { // 0=左の勝ち, 1=右の勝ち, 2=同じくらい, 3=スキップ
+  if (!pair) return;
+  const [L, R] = pair; lastKey = key(L, R);
+  if (res !== 3) {
+    const before = {[L]: {...state.ratings[L]}, [R]: {...state.ratings[R]}};
+    update(L, R, res === 0 ? 1 : res === 1 ? 0 : .5);
+    state.hist.push({a: L, b: R, res, before});
+    if (state.hist.length > HIST_MAX) state.hist.shift();
+  }
+  if (focus && pair.includes(focus.id) && --focus.left <= 0) focus = null;
+  pair = null; save(); render();
+}
+function undo() {
+  const h = state.hist.pop(); if (!h) return;
+  for (const id in h.before) if (state.ratings[id]) state.ratings[id] = h.before[id];
+  state.t = Math.max(0, state.t - 1);
+  if (state.ratings[h.a] && state.ratings[h.b]) {
+    pair = [h.a, h.b];
+    if (focus && pair.includes(focus.id)) { focus.left++; focus.used.pop(); if (pair[0] !== focus.id) pair.reverse(); }
+  } else pair = null;
+  save(); render(true);
+}
+
+async function addFiles(files) {
+  const imgs = [...files].filter(f => f.type.startsWith('image/'));
+  if (!imgs.length) return;
+  $('status').textContent = '読み込み中…';
+  const rs = ids().map(id => state.ratings[id].r);
+  const mean = rs.length ? rs.reduce((s, x) => s + x, 0) / rs.length : 1500;
+  // 最初の1枚は比べる相手がいないので配置比較なしで置く
+  const first = rs.length === 0;
+  for (const f of imgs) {
+    const blob = await shrink(f); const id = uid();
+    urls[id] = URL.createObjectURL(blob);
+    await idb('images', 'readwrite', s => s.put({id, blob}));
+    state.names[id] = f.name.replace(/\.[^.]+$/, '');
+    state.ratings[id] = {r: mean, rd: RD0, n: 0, p: PLACE_N, last: state.t};
+  }
+  if (first && imgs.length === 1) state.ratings[ids()[0]].p = 0;
+  pair = null; save(); render();
+}
+function removeItem(id) {
+  delete state.ratings[id]; delete state.names[id];
+  state.hist = state.hist.filter(h => h.a !== id && h.b !== id);
+  idb('images', 'readwrite', s => s.delete(id));
+  if (urls[id]) URL.revokeObjectURL(urls[id]); delete urls[id];
+  if (pair && pair.includes(id)) pair = null;
+  if (focus && focus.id === id) focus = null;
+  save(); render();
+}
+// 初期化：画像は残し、レートと記録を新規追加と同じ状態に戻す
+function resetItem(id) {
+  const others = ids().filter(x => x !== id).map(x => state.ratings[x].r);
+  const mean = others.length ? others.reduce((s, x) => s + x, 0) / others.length : 1500;
+  state.ratings[id] = {r: mean, rd: RD0, n: 0, p: others.length ? PLACE_N : 0, last: state.t};
+  state.hist = state.hist.filter(h => h.a !== id && h.b !== id);
+  if (pair && pair.includes(id)) pair = null;
+  if (focus && focus.id === id) focus = null;
+  save(); render();
+}
+function startFocus(id) { focus = {id, left: FOCUS_N, used: []}; pair = null; }
+
+// ---- 表示 ----
+function view() {
+  const all = ids(), rs = all.map(id => state.ratings[id].r);
+  const mean = rs.length ? rs.reduce((s, x) => s + x, 0) / rs.length : 1500;
+  const ord = [...all].sort((x, y) => state.ratings[y].r - state.ratings[x].r);
+  const rank = {}; ord.forEach((id, i) => rank[id] = i);
+  // 強さ 0〜100 = 平均的なレートの相手への予想勝率
+  const pct = r => Math.round(100 * expect(r, mean));
+  return {ord, rank, pct};
+}
+function strengthText(id, v) {
+  const x = state.ratings[id], rd = rdNow(x);
+  return `強さ ${v.pct(x.r)}（${v.pct(x.r - rd)}〜${v.pct(x.r + rd)}）`;
+}
+
+function render(keepPair) {
+  const all = ids(), n = all.length;
+  if (!keepPair && (!pair || !pair.every(id => state.ratings[id]))) pair = pickPair();
+  const v = view();
+  $('undoBtn').disabled = !state.hist.length;
+  $('empty').hidden = n > 0;
+  $('arena').hidden = !pair;
+  const placing = all.filter(id => state.ratings[id].p > 0).length;
+  let st = n ? `登録 ${n}件、比較 ${state.t}回` + (placing ? `、配置比較中 ${placing}件` : '') : '';
+  if (!storageOK) st += '。この環境では保存できないため、閉じると消えます';
+  $('status').textContent = $('status').dataset.flash || st;
+
+  // 直近20回で順位がどれだけ動いたか：履歴を巻き戻して比べる
+  const H = state.hist.length;
+  if (H >= 20 && n > 2) {
+    const old = {}; for (const id of all) old[id] = state.ratings[id].r;
+    for (let k = H - 1; k >= H - 20; k--) for (const id in state.hist[k].before) if (id in old) old[id] = state.hist[k].before[id].r;
+    const po = [...all].sort((x, y) => old[y] - old[x]); let d = 0;
+    po.forEach((id, i) => d += Math.abs(v.rank[id] - i));
+    $('remain').textContent = `直近20回での順位変動 平均${(d / n).toFixed(1)}位`;
+  } else $('remain').textContent = '';
+
+  $('focusbar').hidden = !(focus && pair);
+  if (focus && pair) {
+    $('focusbar').querySelector('img').src = urls[focus.id] || '';
+    const phase = FOCUS_N - focus.left < FAR_N ? 'レートが少し離れた相手' : 'レートが近い相手';
+    $('focusbar').querySelector('span').textContent = `集中比較中：${state.names[focus.id]}（現在${v.rank[focus.id] + 1}位）あと${focus.left}回（${phase}）`;
+  }
+  if (pair) {
+    for (const [el, id] of [[$('left'), pair[0]], [$('right'), pair[1]]]) {
+      el.querySelector('img').src = urls[id] || '';
+      el.querySelector('img').alt = state.names[id] || '';
+      el.querySelector('span').textContent = state.names[id] || '';
+      const x = state.ratings[id];
+      el.querySelector('.pw').textContent = showPw ? (x.p > 0 ? `配置比較中 ${PLACE_N - x.p}/${PLACE_N}` : `${strengthText(id, v)}・${v.rank[id] + 1}位`) : '';
+    }
+    $('pwBtn').textContent = showPw ? '強さを隠す' : '強さを表示';
+  }
+
+  $('listTitle').hidden = !n;
+  $('listTitle').textContent = `現在の順位（${n}件）`;
+  const ol = $('list'); ol.textContent = '';
+  v.ord.forEach((id, i) => {
+    const x = state.ratings[id];
+    const li = document.createElement('li'); li.className = 'item' + (focus && focus.id === id ? ' focused' : '');
+    const b = document.createElement('div'); b.className = 'rank'; b.textContent = i + 1;
+    const img = document.createElement('img'); img.src = urls[id] || ''; img.alt = state.names[id] || ''; img.loading = 'lazy';
+    const nm = document.createElement('div'); nm.className = 'name'; nm.textContent = state.names[id] || '';
+    const meta = document.createElement('div'); meta.className = 'meta';
+    meta.textContent = x.p > 0 ? `配置比較中 ${PLACE_N - x.p}/${PLACE_N}` : `${strengthText(id, v)}・比較${x.n}回`;
+    const a = document.createElement('div'); a.className = 'acts';
+    const fc = document.createElement('button'); fc.textContent = '集中';
+    fc.onclick = () => { startFocus(id); render(); window.scrollTo({top: 0, behavior: 'smooth'}); };
+    const del = document.createElement('button'); del.textContent = '削除'; del.onclick = () => removeItem(id);
+    const ini = document.createElement('button'); ini.className = 'wide'; ini.textContent = '初期化';
+    let armed = null;
+    ini.onclick = () => {
+      if (!armed) { ini.textContent = 'もう一度押すと初期化'; armed = setTimeout(() => { armed = null; ini.textContent = '初期化'; }, 3000); return; }
+      clearTimeout(armed); resetItem(id);
+    };
+    a.append(fc, del, ini); li.append(b, img, nm, meta, a); ol.append(li);
+  });
+}
+
+$('addBtn').onclick = () => $('file').click();
+$('file').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
+$('left').onclick = () => record(0);
+$('right').onclick = () => record(1);
+$('tieBtn').onclick = () => record(2);
+$('skipBtn').onclick = () => record(3);
+$('undoBtn').onclick = undo;
+$('pwBtn').onclick = () => { showPw = !showPw; render(true); };
+let resetArmed = null;
+$('resetBtn').onclick = async () => {
+  if (!resetArmed) {
+    $('resetBtn').textContent = 'もう一度押すと削除';
+    resetArmed = setTimeout(() => { resetArmed = null; $('resetBtn').textContent = 'すべて削除'; }, 3000);
+    return;
+  }
+  clearTimeout(resetArmed); resetArmed = null; $('resetBtn').textContent = 'すべて削除';
+  Object.values(urls).forEach(u => URL.revokeObjectURL(u));
+  for (const k in urls) delete urls[k];
+  state = blank(); pair = null; focus = null;
+  await idb('images', 'readwrite', s => s.clear()); save(); render();
+};
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (pair && e.key === 'ArrowLeft') { e.preventDefault(); record(0); }
+  else if (pair && e.key === 'ArrowRight') { e.preventDefault(); record(1); }
+  else if (pair && e.key === 'ArrowDown') { e.preventDefault(); record(2); }
+  else if (pair && (e.key === 's' || e.key === 'S')) record(3);
+  else if (e.key === 'z' || e.key === 'Z') undo();
+});
+window.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('dragging'); });
+window.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('dragging'); });
+window.addEventListener('drop', e => { e.preventDefault(); document.body.classList.remove('dragging'); addFiles(e.dataTransfer.files); });
+
+// ---- 保存と読み込み ----
+const blobToDataURL = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); });
+function dataURLToBlob(u) {
+  const [meta, b64] = u.split(','); const type = (meta.match(/data:([^;]+)/) || [])[1] || 'image/jpeg';
+  const bin = atob(b64), arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], {type});
+}
+async function saveFile(filename, blob) {
+  // claude.ai 上では downloads 機能、通常のサイトではブラウザのダウンロードを使う
+  const dl = window.claude && window.claude.use ? await window.claude.use('downloads').catch(() => null) : null;
+  if (dl) { await dl.save({filename, data: blob}); return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+async function exportData() {
+  if (!ids().length) { flash('保存するデータがありません'); return; }
+  flash('書き出し中…');
+  const recs = await idb('images', 'readonly', s => s.getAll()) || [];
+  const images = {};
+  for (const r of recs) if (state.ratings[r.id]) images[r.id] = await blobToDataURL(r.blob);
+  const data = {app: 'pairsort', savedAt: new Date().toISOString(), state, images};
+  const d = new Date(), pad = x => String(x).padStart(2, '0');
+  const name = `ranking-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.json`;
+  try { await saveFile(name, new Blob([JSON.stringify(data)], {type: 'application/json'})); flash('保存しました'); }
+  catch (e) { flash(e && e.code === 'declined' ? '保存をキャンセルしました' : '保存できませんでした'); }
+}
+async function importData(file) {
+  let data;
+  try { data = JSON.parse(await file.text()); } catch (e) { flash('ファイルを読み込めませんでした'); return; }
+  if (!data || data.app !== 'pairsort' || !data.state || data.state.version !== 3 || !data.images) { flash('このツールの保存ファイルではありません'); return; }
+  Object.values(urls).forEach(u => URL.revokeObjectURL(u));
+  for (const k in urls) delete urls[k];
+  await idb('images', 'readwrite', s => s.clear());
+  for (const [id, u] of Object.entries(data.images)) {
+    const blob = dataURLToBlob(u); urls[id] = URL.createObjectURL(blob);
+    await idb('images', 'readwrite', s => s.put({id, blob}));
+  }
+  state = data.state; state.hist = state.hist || [];
+  for (const id of Object.keys(state.ratings)) if (!urls[id]) { delete state.ratings[id]; delete state.names[id]; }
+  state.hist = state.hist.filter(h => state.ratings[h.a] && state.ratings[h.b]);
+  pair = null; focus = null; save(); render(); flash(`${ids().length}件を読み込みました`);
+}
+let flashTimer = null;
+function flash(msg) { $('status').dataset.flash = msg; render(true); clearTimeout(flashTimer); flashTimer = setTimeout(() => { delete $('status').dataset.flash; render(true); }, 3000); }
+$('exportBtn').onclick = exportData;
+let importArmed = null;
+$('importBtn').onclick = () => {
+  if (ids().length && !importArmed) {
+    $('importBtn').textContent = '今のデータは上書きされます。もう一度押す';
+    importArmed = setTimeout(() => { importArmed = null; $('importBtn').textContent = '読み込み'; }, 4000);
+    return;
+  }
+  clearTimeout(importArmed); importArmed = null; $('importBtn').textContent = '読み込み';
+  $('importFile').click();
+};
+$('importFile').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) importData(f); };
+
+// 旧版からの移行：これまでの比較ログから Bradley–Terry で強さを一度だけ推定し、レートの初期値にする
+function migrate(saved) {
+  const names = saved.names || {};
+  let comps = saved.comps;
+  if (!comps && saved.ranked) { comps = []; for (let i = 0; i + 1 < saved.ranked.length; i++) comps.push([saved.ranked[i], saved.ranked[i + 1]]); }
+  comps = (comps || []).filter(c => c[0] in names && c[1] in names);
+  const list = Object.keys(names), idx = {}; list.forEach((id, i) => idx[id] = i);
+  const s = list.map(() => 1), W = list.map(() => 1), cnt = list.map(() => 0);
+  for (const [a, b, t] of comps) { if (t) { W[idx[a]] += .5; W[idx[b]] += .5; } else W[idx[a]]++; cnt[idx[a]]++; cnt[idx[b]]++; }
+  for (let it = 0; it < 300; it++) {
+    const D = s.map(x => 2 / (x + 1));
+    for (const [a, b] of comps) { const i = idx[a], j = idx[b], v = 1 / (s[i] + s[j]); D[i] += v; D[j] += v; }
+    for (let i = 0; i < s.length; i++) s[i] = W[i] / D[i];
+  }
+  const st = blank(); st.names = names;
+  // 旧データは信頼幅を広め（200）にして、今後の比較で動きやすくする
+  list.forEach((id, i) => st.ratings[id] = {r: 1500 + 400 * Math.log10(s[i]), rd: 200, n: cnt[i], p: 0, last: 0});
+  return st;
+}
+
+(async () => {
+  const saved = await idb('kv', 'readonly', s => s.get('state'));
+  if (saved && saved.version === 3) state = saved;
+  else if (saved && saved.names) state = migrate(saved);
+  const recs = await idb('images', 'readonly', s => s.getAll()) || [];
+  for (const r of recs) urls[r.id] = URL.createObjectURL(r.blob);
+  for (const id of Object.keys(state.names)) if (!urls[id]) { delete state.names[id]; delete state.ratings[id]; }
+  for (const id of Object.keys(state.ratings)) if (!(id in state.names)) delete state.ratings[id];
+  state.hist = state.hist.filter(h => state.ratings[h.a] && state.ratings[h.b]);
+  save(); render();
+})();
+</script>
+</body>
+</html>
