@@ -168,7 +168,7 @@
       display: grid;
       grid-template-columns: minmax(0, 260px) auto minmax(0, 260px);
       justify-content: center;
-      align-items: center;
+      align-items: stretch;
       gap: 12px;
       margin-top: 12px;
     }
@@ -201,7 +201,16 @@
       background: var(--surface);
     }
     .card .name { font-size: 1rem; text-align: center; overflow-wrap: anywhere; }
-    .card .power { color: var(--sub); font-size: .85rem; text-align: center; }
+    .card .power {
+      display: flex;
+      flex: 1;                 /* カード同士の高さが揃うぶん、この部分が伸び縮みして吸収する */
+      align-items: center;
+      justify-content: center;
+      line-height: 1.4;
+      color: var(--sub);
+      font-size: .85rem;
+      text-align: center;
+    }
 
     .arena-actions {
       display: flex;
