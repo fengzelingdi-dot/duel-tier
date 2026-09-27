@@ -97,7 +97,7 @@
       margin-top: 10px;
       font-size: 1rem;
     }
-    .title-row label { color: var(--sub); }
+    .title-row label { color: var(--ink); }
     .title-row input {
       flex: 1;
       max-width: 260px;
@@ -111,6 +111,7 @@
     }
     .title-row input:focus-visible { outline: 3px solid var(--blue); outline-offset: 1px; }
     .title-row .title-suffix { color: var(--ink); }
+    .title-row #helpBtn { margin-left: 8px; }
 
     .toolbar {
       display: flex;
@@ -491,11 +492,11 @@
     <h1>二択式ランキングメーカー</h1>
     <div class="title-row">
       <label for="titleInput">タイトル</label>
-      <input type="text" id="titleInput" placeholder="例：漫画" maxlength="40">
+      <input type="text" id="titleInput" placeholder="例：好きな漫画" maxlength="40">
       <span class="title-suffix">ランキング</span>
+      <button class="btn" id="helpBtn">使い方</button>
     </div>
     <div class="toolbar">
-      <button class="btn" id="helpBtn">使い方</button>
       <button class="btn primary" id="addBtn">画像を追加</button>
       <span class="sample-picker" id="resizePicker">
         <button class="btn" id="resizeBtn">リサイズ</button>
