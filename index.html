@@ -1185,7 +1185,7 @@ async function downloadFile(filename, blob) {
 /* タイトルを反映したファイル名を作る。「タイトル未入力なら既定の名前」という扱い */
 function titledFilename(ext) {
   const d = new Date(), pad = x => String(x).padStart(2, "0");
-  const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
+  const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
   const title = (state.title || "").trim();
   const base = title ? `${title}ランキング` : "ranking";
   return `${base}-${stamp}.${ext}`;
