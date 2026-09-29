@@ -309,7 +309,8 @@
     .item .name { margin-top: 3px; font-size: .8rem; overflow-wrap: anywhere; }
     .item .meta { color: var(--sub); font-size: .68rem; }
 
-    .thumb { position: relative; }
+    .thumb { position: relative; cursor: grab; }
+    .item.dragging { opacity: .35; }
 
     .rank {
       position: absolute;
@@ -363,6 +364,12 @@
     .item-actions .wide   { grid-column: 1 / -1; }
     .item-actions .move   { font-weight: 700; }
     .item-actions .lock.active { background: var(--blue); border-color: var(--blue); color: var(--on-blue); }
+
+    .compact-row {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
 
     @media (max-width: 480px) {
       .duel { gap: 6px; }
@@ -614,6 +621,7 @@
         </div>
       </span>
       <button class="btn" id="sheetBtn">シート作成</button>
+      <button class="btn" id="tierAddBtn">Tier追加</button>
       <button class="btn" id="nameBtn">名前を隠す</button>
       <button class="btn" id="resetAllRatingsBtn">全初期化</button>
       <button class="btn danger" id="resetBtn">すべて削除</button>
@@ -669,10 +677,18 @@
   <h2 id="listTitle" hidden></h2>
   <ol class="list" id="list"></ol>
 
+  <div class="compact-row">
+    <button class="btn" id="compactTiersBtn">Tierを詰める</button>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <div class="tier-menu" id="tierMenu" hidden>
     <div class="tier-menu-options" id="tierMenuOptions"></div>
+  </div>
+
+  <div class="tier-menu" id="tierAddMenu" hidden>
+    <div class="tier-menu-options" id="tierAddMenuOptions"></div>
   </div>
 
   <div class="modal-overlay" id="tierNameOverlay" hidden>
@@ -695,6 +711,22 @@
             <button class="btn" id="tierNameBack">戻る</button>
             <button class="btn primary" id="tierNameGo">シートを作成</button>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="tierGapOverlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tierGapTitle">
+      <div class="modal-head">
+        <h2 id="tierGapTitle">Tierの番号に抜けがあります</h2>
+        <button class="modal-close" id="tierGapClose" aria-label="閉じる">×</button>
+      </div>
+      <div class="modal-body">
+        <p>使われていないTierの番号があります。自動的に詰めてからシートを作成しますか？</p>
+        <div class="tier-name-choice">
+          <button class="btn" id="tierGapCancel">キャンセル</button>
+          <button class="btn primary" id="tierGapOk">詰めて作成</button>
         </div>
       </div>
     </div>
@@ -731,11 +763,13 @@
         <p>比較のたびに、双方の「強さ」という数値が動きます。強さは、平均的な画像と比べたときの予想勝率を0〜100で表したものです。数値の後ろの括弧は、その数値がどれくらいの幅で動きうるかを示しています。</p>
 
         <h3>順位を手動で入れ替える</h3>
-        <p>一覧の「←」「→」ボタンで、隣の順位の画像とちょうど入れ替えられます。強さの数値がほぼ同じで、どちらが上でも大差ないと感じる場合の微調整に使います。両端の画像や、Tierが異なる隣の画像とは入れ替えられません。</p>
+        <p>画像の枠をつかんでドラッグすると、離した位置まで順位を動かせます。動かしている間、他の画像もその場でリアルタイムに詰めます。一覧の「←」「→」ボタンでは、隣の順位の画像とちょうど1つだけ入れ替えられます。両端の画像や、Tierが異なる画像との間、ロック中の画像とは動かせません。Tierが未定の画像は、どの位置にでも動かせます。</p>
 
         <h3>Tier</h3>
         <p>一覧の各画像の上にあるリボンで、Tierを設定できます。Tierは1から始まる番号で、番号が小さいほうが必ず上位になります。異なるTier同士は二択にも自動の出題にも出ず、順位が入れ替わることもありません。Tierが未定の画像は、どのTierとも比較でき、順位表でもどこにでも入り込めます。</p>
-        <p>選べる番号は「今ある最大のTier番号+1」までで、途中を飛ばして作ることはできません。途中のTierを全員未定に戻すと、後ろの番号は自動的に繰り上がって詰まります。比較の回数に関係なく、いつでもTierを設定できます。</p>
+        <p>選べる番号は最初から1〜5まで用意されており、途中の番号を使わずに飛ばしても構いません。5を実際に使うと6まで選べるようになり、以降も一番上の番号を使うたびに1つずつ広がります。最大20まで作れます。</p>
+        <p>ツールバーの「Tier追加」から、好きな位置に新しいTierの枠を挿入できます。挿入した位置より下の番号はすべて1つずつ繰り下がります。</p>
+        <p>順位一覧の下にある「Tierを詰める」を押すと、使われていない番号を取り除いて、実際に使われている番号だけで1から並べ直します。</p>
 
         <h3>ロック</h3>
         <p>一覧の「ロック」ボタンで、まとめてロック・解除ができます。ロック中の画像は二択にも自動の出題にも出ず、順位の入れ替えもできません。</p>
@@ -754,6 +788,7 @@
 
         <h3>Tier表シートの書き出し</h3>
         <p>Tierを1つも設定していない場合は、これまでどおり現在の順位を10位ごとに区切り、「Top10」「Top20」のような見出しで出力します。最後の行が10枚に満たなくても、見出しは10の倍数に切り上げます。</p>
+        <p>Tierの番号に使われていないものがある状態でシートを作成しようとすると、先に自動的に詰めてよいか確認されます。詰めると、以降そのTierの番号は1からの連番になります。</p>
         <p>「シート作成」で、現在の順位をTierごとに10列で折り返しながら並べた1枚のPNG画像を書き出せます。Tierが1つ以上ある場合は、先に「Tier 1」のままにするか、それぞれに名前を付けるかを聞かれます。名前を付けた場合、行の見出しはその名前になります。空欄のままにした番号は「Tier N」のままです。行の左には見出しが付き、Tierの番号に応じて色が虹色に変わります。Tierが未定の画像のうち、あるTierの最上位から最下位までの間に挟まっている分はそのTierとして扱われます。それ以外の未定の画像は「未定」としてまとめ、黒いラベルで出ます。タイトルを入れている場合は、上部にその名前も入ります。</p>
 
       </div>
@@ -770,11 +805,15 @@ const RATING_START   = 1500;  // 最初の画像のレート
 const RD_START       = 350;   // 新しい画像の信頼幅（最大値）
 const RD_MIN         = 50;    // 信頼幅の下限
 const RD_GROWTH      = 25;    // 比較されない間に信頼幅が広がる速さ
+const RATING_JITTER  = 0.01;  // 複数の画像に同時に同じレートを与えるとき、手動での並べ替えができるように見分けをつける程度のばらつき
+const jitteredRating = base => base + (Math.random() - 0.5) * RATING_JITTER;
 const PLACEMENT_N    = 4;     // 新しい画像の配置比較の回数（表示や強さの公開はここまで）
 const PLACEMENT_WIDE_N = 7;   // 幅広い相手と当てる期間（表示には出さず、内部の挙動だけ長く続ける）
 const HISTORY_MAX    = 300;   // Undo で戻れる回数
 const STABILITY_SPAN = 20;    // 順位変動を測る直近の比較数
 const RECENT_KEYS_MAX = 10;   // 同じ組み合わせを避けておく直近の回数
+const TIER_MAX_DEFAULT = 5;   // Tierの箱数の初期値・下限
+const TIER_MAX_CAP     = 20;  // Tierの箱数の上限
 // 保存する画像の縦横比（幅 / 高さ）。ラベルは「縦:横」の言い方に合わせている
 const RESIZE_RATIOS  = { "4:3": 3 / 4, "1:1": 1, "3:4": 4 / 3 };
 const RESIZE_DEFAULT = "4:3";
@@ -796,7 +835,7 @@ const SAMPLE_DIR     = "samples/";  // サンプル画像のフォルダ。中�
    t    : これまでの比較の総数（時間の代わりに使う）
    hist : Undo 用の履歴 { a, b, res, before }
    ================================================================== */
-const emptyState = () => ({ version: 3, names: {}, ratings: {}, t: 0, hist: [], title: "", resizeRatio: RESIZE_DEFAULT });
+const emptyState = () => ({ version: 3, names: {}, ratings: {}, t: 0, hist: [], title: "", resizeRatio: RESIZE_DEFAULT, tierMax: TIER_MAX_DEFAULT });
 
 let state     = emptyState();
 let pair      = null;   // いま表示している2枚 [左, 右]
@@ -817,6 +856,9 @@ const mean = list => (list.length ? list.reduce((s, x) => s + x, 0) / list.lengt
 /* ---- Tier ---- */
 const getTier = id => (state.ratings[id] ? state.ratings[id].tier : null); // null = 未定
 const maxTier = () => allIds().reduce((m, id) => Math.max(m, getTier(id) || 0), 0);
+// 個別画像のTierメニューで選べる番号の上限。tierMaxまでは常に選べ、
+// 一番上の箱（tierMax）が実際に使われていれば、その1つ上まで選べるようになる
+const tierCeiling = () => (maxTier() === state.tierMax && state.tierMax < TIER_MAX_CAP) ? state.tierMax + 1 : state.tierMax;
 // 片方が未定、または同じTierなら比較できる。Tierが違えば比較できない
 const tierCompatible = (a, b) => {
   const ta = getTier(a), tb = getTier(b);
@@ -828,7 +870,8 @@ const hasPartner = id => allIds().some(b => b !== id && !isLocked(b) && tierComp
 // Tier表シートの行の色と同じ虹の配色。tierNum は1始まり、maxT は今の最大Tier
 const tierColor = (tierNum, maxT) => `hsl(${maxT > 1 ? ((tierNum - 1) / (maxT - 1)) * 270 : 0}, 70%, 42%)`;
 
-/* Tierの数字に欠番ができないよう、使われている番号だけを1から詰め直す */
+/* Tierの数字の欠番を、実際に使われている番号だけを取り出して1から詰め直す。
+   自動では呼ばれず、「Tierを詰める」ボタンとシート作成時の警告からのみ呼ばれる */
 function compactTiers() {
   const used = [...new Set(allIds().map(id => state.ratings[id].tier).filter(t => t !== null))].sort((a, b) => a - b);
   const remap = {};
@@ -837,12 +880,28 @@ function compactTiers() {
     const t = state.ratings[id].tier;
     if (t !== null) state.ratings[id].tier = remap[t];
   }
+  state.tierMax = Math.max(TIER_MAX_DEFAULT, used.length);
 }
 
 function setTier(id, tier) {
   if (!state.ratings[id]) return;
   state.ratings[id].tier = tier;
-  compactTiers();
+  if (tier !== null) state.tierMax = Math.max(state.tierMax, tier);
+  if (pair && !tierCompatible(pair[0], pair[1])) pair = null;
+  saveState();
+  render();
+}
+
+/* Tierの箱を1つ、指定した境目に挿入する。pos は「Tier pos の直後」を表し、
+   0なら最上位（Tier1の上）に、tierMaxならTier tierMax の下に新しい空の箱ができる。
+   pos より大きいTierはすべて1つ繰り上がる */
+function insertTier(pos) {
+  if (state.tierMax >= TIER_MAX_CAP) return;
+  for (const id of allIds()) {
+    const t = state.ratings[id].tier;
+    if (t !== null && t > pos) state.ratings[id].tier = t + 1;
+  }
+  state.tierMax += 1;
   if (pair && !tierCompatible(pair[0], pair[1])) pair = null;
   saveState();
   render();
@@ -1107,6 +1166,95 @@ function moveRank(id, dir) {
   render(true);
 }
 
+/* ==================================================================
+   ドラッグ&ドロップによる順位の並べ替え
+   マウスで掴んだ画像を、他の画像の間に直接運んで順位を決める。
+   ←→と同じく、異なるTierをまたぐ移動とロック中の画像は対象外
+   ================================================================== */
+const DRAG_RATE_GAP = 40; // 一覧の端まで動かしたときに使う、レートの差の目安
+let dragId = null;
+let dragOrder = null; // ドラッグ中の見た目上の並び（idの配列、全件）
+let dragBand = null;  // ドラッグ中の画像が実際に入れる相手のidの集合
+
+/* idの現在位置から、両隣に向かってtierCompatibleかつ未ロックの間だけ範囲を広げる。
+   未定の画像はどの隣とも両立するので、実質リスト全体が対象になる */
+function computeDragBand(id, order) {
+  const pos = order.indexOf(id);
+  let lo = pos, hi = pos;
+  while (lo > 0 && tierCompatible(id, order[lo - 1]) && !isLocked(order[lo - 1])) lo--;
+  while (hi < order.length - 1 && tierCompatible(id, order[hi + 1]) && !isLocked(order[hi + 1])) hi++;
+  return new Set(order.slice(lo, hi + 1).filter(x => x !== id));
+}
+
+function startDrag(id, li) {
+  if (isLocked(id)) return false;
+  const order = makeRanking().order;
+  dragId = id;
+  dragBand = computeDragBand(id, order);
+  dragOrder = [...order];
+  li.classList.add("dragging");
+  return true;
+}
+
+/* targetId の左半分に来ていれば手前へ、右半分なら後ろへ、DOMと見た目上の並びを両方動かす */
+function moveDragTo(targetId, clientX) {
+  if (!dragId || targetId === dragId || !dragBand.has(targetId)) return;
+  const list = $("list");
+  const draggedLi = list.querySelector(`[data-id="${dragId}"]`);
+  const targetLi = list.querySelector(`[data-id="${targetId}"]`);
+  if (!draggedLi || !targetLi) return;
+
+  const rect = targetLi.getBoundingClientRect();
+  const before = clientX < rect.left + rect.width / 2;
+  draggedLi.remove();
+  targetLi.insertAdjacentElement(before ? "beforebegin" : "afterend", draggedLi);
+
+  dragOrder = dragOrder.filter(x => x !== dragId);
+  const targetIdx = dragOrder.indexOf(targetId);
+  dragOrder.splice(before ? targetIdx : targetIdx + 1, 0, dragId);
+}
+
+/* 新しい両隣の間にちょうど収まるレート値を割り当てる。他の画像のレートには触れない */
+function applyDragPosition(id, aboveId, belowId) {
+  const item = state.ratings[id];
+  if (!item) return;
+  const aboveR = aboveId ? state.ratings[aboveId].r : null;
+  const belowR = belowId ? state.ratings[belowId].r : null;
+  let newR;
+  if (aboveR !== null && belowR !== null) newR = (aboveR + belowR) / 2;
+  else if (aboveR !== null) newR = aboveR - DRAG_RATE_GAP;
+  else if (belowR !== null) newR = belowR + DRAG_RATE_GAP;
+  else return; // 動かせる相手がいない
+
+  const before = { [id]: { ...item } };
+  item.r = newR;
+  state.hist.push({ type: "swap", a: id, b: id, before });
+  if (state.hist.length > HISTORY_MAX) state.hist.shift();
+  saveState();
+}
+
+function finishDrag() {
+  if (!dragId) return;
+  const id = dragId;
+  const idx = dragOrder.indexOf(id);
+  const aboveId = idx > 0 ? dragOrder[idx - 1] : null;
+  const belowId = idx < dragOrder.length - 1 ? dragOrder[idx + 1] : null;
+  dragId = null;
+  dragOrder = null;
+  dragBand = null;
+  applyDragPosition(id, aboveId, belowId);
+  render(true);
+}
+
+function cancelDrag() {
+  if (!dragId) return;
+  dragId = null;
+  dragOrder = null;
+  dragBand = null;
+  render(true);
+}
+
+
 function undo() {
   const last = state.hist.pop();
   if (!last) return;
@@ -1153,7 +1301,7 @@ async function addImages(files) {
     urls[id] = URL.createObjectURL(blob);
     await db("images", "readwrite", s => s.put({ id, blob }));
     state.names[id] = file.name.replace(/\.[^.]+$/, "");
-    state.ratings[id] = { r: startRating, rd: RD_START, n: 0, p: PLACEMENT_N, w: PLACEMENT_WIDE_N, tier: null, locked: false, last: state.t };
+    state.ratings[id] = { r: jitteredRating(startRating), rd: RD_START, n: 0, p: PLACEMENT_N, w: PLACEMENT_WIDE_N, tier: null, locked: false, last: state.t };
     done++;
     if (total > 1) setProgress(done, total);
   }));
@@ -1175,7 +1323,6 @@ function deleteImage(id) {
   if (urls[id]) URL.revokeObjectURL(urls[id]);
   delete urls[id];
   if (pair && pair.includes(id)) pair = null;
-  compactTiers();
   saveState();
   render();
 }
@@ -1187,8 +1334,9 @@ function resetAllRatings() {
   const p = ids.length > 1 ? PLACEMENT_N : 0;
   const w = ids.length > 1 ? PLACEMENT_WIDE_N : 0;
   for (const id of ids) {
-    state.ratings[id] = { r: RATING_START, rd: RD_START, n: 0, p, w, tier: null, locked: false, last: state.t };
+    state.ratings[id] = { r: jitteredRating(RATING_START), rd: RD_START, n: 0, p, w, tier: null, locked: false, last: state.t };
   }
+  state.tierMax = TIER_MAX_DEFAULT;
   state.hist = [];
   pair = null;
   saveState();
@@ -1361,6 +1509,7 @@ function cleanUpState() {
     if (state.ratings[id].tier === undefined) state.ratings[id].tier = null; // 古い保存データの互換（旧ロックは引き継がない）
     if (state.ratings[id].locked === undefined) state.ratings[id].locked = false;
   }
+  if (state.tierMax === undefined) state.tierMax = Math.max(TIER_MAX_DEFAULT, maxTier()); // 古い保存データの互換
   delete state.lockedTop;    // 旧ロック機能の名残。Tierには引き継がない
   delete state.lockedBottom;
   state.hist = state.hist.filter(h => state.ratings[h.a] && state.ratings[h.b]);
@@ -1409,7 +1558,6 @@ function buildTierRows(ranking, tierNames) {
     else { ranges[t].min = Math.min(ranges[t].min, i); ranges[t].max = Math.max(ranges[t].max, i); }
   });
   const tiers = Object.keys(ranges).map(Number).sort((a, b) => a - b);
-  const maxT = tiers.length ? Math.max(...tiers) : 0;
 
   const covered = new Set();
   for (const t of tiers) { const { min, max } = ranges[t]; for (let i = min; i <= max; i++) covered.add(i); }
@@ -1425,7 +1573,7 @@ function buildTierRows(ranking, tierNames) {
   const rows = [];
   for (const g of groups) {
     const label = g.tier === null ? "未定" : (tierNames && tierNames[g.tier]) || `Tier ${g.tier}`;
-    const color = g.tier === null ? "#000000" : tierColor(g.tier, maxT);
+    const color = g.tier === null ? "#000000" : tierColor(g.tier, state.tierMax);
     for (let i = 0; i < g.ids.length; i += SHEET_COLS) {
       rows.push({ ids: g.ids.slice(i, i + SHEET_COLS), label, color });
     }
@@ -1540,8 +1688,24 @@ async function runExportSheets(tierNames) {
   }
 }
 
-/* 「シート作成」の入口。Tierが1つもなければ、名前を聞かずそのまま作る */
+/* Tierの番号に、実際に使われている値の範囲内で抜けがあるかどうか */
+function hasTierGap() {
+  const used = [...new Set(allIds().map(id => getTier(id)).filter(t => t !== null))].sort((a, b) => a - b);
+  if (!used.length) return false;
+  return used[used.length - 1] - used[0] + 1 !== used.length;
+}
+
+/* 「シート作成」の入口。Tierに抜けがあれば先に詰めるかどうかを確認し、
+   Tierが1つもなければ、名前を聞かずそのまま作る */
 function exportSheets() {
+  if (hasTierGap()) {
+    $("tierGapOverlay").hidden = false;
+    return;
+  }
+  proceedExportSheets();
+}
+
+function proceedExportSheets() {
   const maxT = maxTier();
   if (maxT === 0) { runExportSheets({}); return; }
 
@@ -1589,6 +1753,17 @@ $("tierNameBack").addEventListener("click", () => { $("tierNameQuestion").hidden
 $("tierNameGo").addEventListener("click", collectTierNamesAndExport);
 $("tierNameClose").addEventListener("click", () => { $("tierNameOverlay").hidden = true; });
 $("tierNameOverlay").addEventListener("click", e => { if (e.target === $("tierNameOverlay")) $("tierNameOverlay").hidden = true; });
+
+$("tierGapCancel").addEventListener("click", () => { $("tierGapOverlay").hidden = true; });
+$("tierGapOk").addEventListener("click", () => {
+  $("tierGapOverlay").hidden = true;
+  compactTiers();
+  saveState();
+  render();
+  proceedExportSheets();
+});
+$("tierGapClose").addEventListener("click", () => { $("tierGapOverlay").hidden = true; });
+$("tierGapOverlay").addEventListener("click", e => { if (e.target === $("tierGapOverlay")) $("tierGapOverlay").hidden = true; });
 
 /* ==================================================================
    サンプル
@@ -1664,7 +1839,7 @@ async function loadSamples(count) {
     urls[id] = URL.createObjectURL(blob);
     await db("images", "readwrite", s => s.put({ id, blob }));
     state.names[id] = name;
-    state.ratings[id] = { r: RATING_START, rd: RD_START, n: 0, p, w, tier: null, locked: false, last: state.t };
+    state.ratings[id] = { r: jitteredRating(RATING_START), rd: RD_START, n: 0, p, w, tier: null, locked: false, last: state.t };
   }
 
   message = "";
@@ -1712,8 +1887,8 @@ document.addEventListener("click", e => {
 
 /* Tierを選ぶ吹き出し。クリックされたリボン/ボタンのすぐ下に出す */
 function openTierMenu(id, anchorEl) {
-  const max = maxTier();
-  const options = [null, ...Array.from({ length: max + 1 }, (_, i) => i + 1)];
+  const ceiling = tierCeiling();
+  const options = [null, ...Array.from({ length: ceiling }, (_, i) => i + 1)];
   const box = $("tierMenuOptions");
   box.textContent = "";
   options.forEach(opt => {
@@ -1736,6 +1911,47 @@ document.addEventListener("click", e => {
   if (!$("tierMenu").contains(e.target) && !e.target.classList.contains("tier-ribbon")) {
     $("tierMenu").hidden = true;
   }
+});
+
+/* Tierの箱を挿入する位置を選ぶ吹き出し */
+function tierAddLabel(pos, tierMax) {
+  if (pos === 0) return "Tier 1 の上に追加";
+  if (pos === tierMax) return `Tier ${tierMax} の下に追加`;
+  return `Tier ${pos} と Tier ${pos + 1} の間に追加`;
+}
+
+function openTierAddMenu(anchorEl) {
+  const box = $("tierAddMenuOptions");
+  box.textContent = "";
+  for (let pos = 0; pos <= state.tierMax; pos++) {
+    const b = document.createElement("button");
+    b.textContent = tierAddLabel(pos, state.tierMax);
+    b.addEventListener("click", () => { $("tierAddMenu").hidden = true; insertTier(pos); });
+    box.append(b);
+  }
+
+  const menu = $("tierAddMenu");
+  menu.hidden = false;
+  const rect = anchorEl.getBoundingClientRect();
+  const top = Math.min(rect.bottom + 4, window.innerHeight - menu.offsetHeight - 8);
+  const left = Math.min(rect.left, window.innerWidth - menu.offsetWidth - 8);
+  menu.style.top = `${Math.max(8, top)}px`;
+  menu.style.left = `${Math.max(8, left)}px`;
+}
+$("tierAddBtn").addEventListener("click", () => {
+  if ($("tierAddBtn").disabled) return;
+  openTierAddMenu($("tierAddBtn"));
+});
+document.addEventListener("click", e => {
+  if (!$("tierAddMenu").contains(e.target) && e.target !== $("tierAddBtn")) {
+    $("tierAddMenu").hidden = true;
+  }
+});
+
+$("compactTiersBtn").addEventListener("click", () => {
+  compactTiers();
+  saveState();
+  render();
 });
 
 /* ==================================================================
@@ -1861,17 +2077,40 @@ function makeListItem(id, index, ranking) {
   const item = state.ratings[id];
   const li = document.createElement("li");
   li.className = "item";
+  li.dataset.id = id;
 
   const ribbon = document.createElement("button");
   const tier = getTier(id);
-  const mt = maxTier();
   ribbon.className = "tier-ribbon" + (tier !== null ? " assigned" : "");
   ribbon.textContent = tier !== null ? `Tier ${tier}` : "Tierを設定";
-  ribbon.style.background = tier !== null ? tierColor(tier, mt) : "";
+  ribbon.style.background = tier !== null ? tierColor(tier, state.tierMax) : "";
   ribbon.addEventListener("click", () => openTierMenu(id, ribbon));
 
+  const locked = isLocked(id);
   const thumb = document.createElement("div");
   thumb.className = "thumb";
+  thumb.draggable = !locked;
+  thumb.style.cursor = locked ? "default" : "grab";
+  thumb.title = locked ? "" : "ドラッグして順位を変える";
+  thumb.addEventListener("dragstart", e => {
+    if (!startDrag(id, li)) { e.preventDefault(); return; }
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", id);
+  });
+  thumb.addEventListener("dragend", () => { if (dragId === id) cancelDrag(); });
+
+  li.addEventListener("dragover", e => {
+    if (!dragId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    moveDragTo(id, e.clientX);
+  });
+  li.addEventListener("drop", e => {
+    if (!dragId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    finishDrag();
+  });
 
   const badge = document.createElement("div");
   badge.className = "rank";
@@ -1899,7 +2138,6 @@ function makeListItem(id, index, ranking) {
   deleteBtn.textContent = "削除";
   deleteBtn.addEventListener("click", () => deleteImage(id));
 
-  const locked = isLocked(id);
   const lockBtn = document.createElement("button");
   lockBtn.className = "lock" + (locked ? " active" : "");
   lockBtn.textContent = locked ? "解除" : "ロック";
@@ -1942,6 +2180,7 @@ function render(keepPair = false) {
 
   $("undoBtn").disabled = !state.hist.length;
   $("empty").hidden = allIds().length > 0;
+  $("tierAddBtn").disabled = state.tierMax >= TIER_MAX_CAP;
 
   renderStatus();
   renderArena(ranking);
@@ -2045,9 +2284,8 @@ function migrateOldState(saved) {
   }
 
   const next = emptyState();
-  next.names = names;
-  ids.forEach((id, i) => {
-    next.ratings[id] = { r: RATING_START + 400 * Math.log10(strength[i]), rd: 200, n: count[i], p: 0, w: 0, tier: null, locked: false, last: 0 };
+  next.names = names;  ids.forEach((id, i) => {
+    next.ratings[id] = { r: jitteredRating(RATING_START + 400 * Math.log10(strength[i])), rd: 200, n: count[i], p: 0, w: 0, tier: null, locked: false, last: 0 };
   });
   return next;
 }
