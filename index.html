@@ -559,6 +559,29 @@
       font: inherit;
       font-size: .85em;
     }
+
+    .tier-name-choice { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+    .tier-name-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .tier-name-row label {
+      min-width: 64px;
+      font-weight: 700;
+      font-size: .9rem;
+    }
+    .tier-name-row input {
+      flex: 1;
+      padding: 6px 10px;
+      border: 2px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--ink);
+      font: inherit;
+    }
+    .tier-name-row input:focus-visible { outline: 3px solid var(--blue); outline-offset: 1px; }
   </style>
 </head>
 
@@ -651,6 +674,31 @@
     <div class="tier-menu-options" id="tierMenuOptions"></div>
   </div>
 
+  <div class="modal-overlay" id="tierNameOverlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tierNameTitle">
+      <div class="modal-head">
+        <h2 id="tierNameTitle">Tierに名前をつけますか？</h2>
+        <button class="modal-close" id="tierNameClose" aria-label="閉じる">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="tierNameQuestion">
+          <p>シートの見出しを「Tier 1」のままにするか、それぞれに名前を付けるか選べます。</p>
+          <div class="tier-name-choice">
+            <button class="btn" id="tierNameSkip">つけない</button>
+            <button class="btn primary" id="tierNameYes">名前をつける</button>
+          </div>
+        </div>
+        <div id="tierNameForm" hidden>
+          <div id="tierNameInputs"></div>
+          <div class="tier-name-choice">
+            <button class="btn" id="tierNameBack">戻る</button>
+            <button class="btn primary" id="tierNameGo">シートを作成</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="helpOverlay" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
       <div class="modal-head">
@@ -686,7 +734,7 @@
 
         <h3>Tier</h3>
         <p>一覧の各画像の上にあるリボンで、Tierを設定できます。Tierは1から始まる番号で、番号が小さいほうが必ず上位になります。異なるTier同士は二択にも自動の出題にも出ず、順位が入れ替わることもありません。Tierが未定の画像は、どのTierとも比較でき、順位表でもどこにでも入り込めます。</p>
-        <p>選べる番号は「今ある最大のTier番号+1」までで、途中を飛ばして作ることはできません。途中のTierを全員未定に戻すと、後ろの番号は自動的に繰り上がって詰まります。まだ配置比較（4回）が終わっていない画像にはTierを設定できません。</p>
+        <p>選べる番号は「今ある最大のTier番号+1」までで、途中を飛ばして作ることはできません。途中のTierを全員未定に戻すと、後ろの番号は自動的に繰り上がって詰まります。比較の回数に関係なく、いつでもTierを設定できます。</p>
 
         <h3>画像の全初期化・削除</h3>
         <p>「全初期化」は、画像はすべて残したまま、全員のレートと比較の記録だけを消して新規追加と同じ状態に戻します。Tierの割り当てもすべて未定に戻ります。「削除」は画像ごと消します。いずれも誤操作を防ぐため、続けて2回押すと実行されます。</p>
@@ -701,7 +749,8 @@
         <p>あらかじめ用意された画像セットがある場合、「サンプル」ボタンが表示されます。押すと20枚・50枚・100枚から件数を選べるので、試したい枚数を選んでください。これも今のデータを置き換えます。サンプルはあらかじめ用意されたサイズのまま使うので、リサイズの設定は効きません。読み込み中は進捗バーが出ます。</p>
 
         <h3>Tier表シートの書き出し</h3>
-        <p>「シート作成」で、現在の順位をTierごとに10列で折り返しながら並べた1枚のPNG画像を書き出せます。行の左には「Tier 1」「Tier 2」のような見出しが付き、Tierの番号に応じて色が虹色に変わります。Tierが未定の画像のうち、あるTierの最上位から最下位までの間に挟まっている分はそのTierとして扱われます。それ以外の未定の画像は「未定」としてまとめ、黒いラベルで出ます。タイトルを入れている場合は、上部にその名前も入ります。</p>
+        <p>Tierを1つも設定していない場合は、これまでどおり現在の順位を10位ごとに区切り、「Top10」「Top20」のような見出しで出力します。最後の行が10枚に満たなくても、見出しは10の倍数に切り上げます。</p>
+        <p>「シート作成」で、現在の順位をTierごとに10列で折り返しながら並べた1枚のPNG画像を書き出せます。Tierが1つ以上ある場合は、先に「Tier 1」のままにするか、それぞれに名前を付けるかを聞かれます。名前を付けた場合、行の見出しはその名前になります。空欄のままにした番号は「Tier N」のままです。行の左には見出しが付き、Tierの番号に応じて色が虹色に変わります。Tierが未定の画像のうち、あるTierの最上位から最下位までの間に挟まっている分はそのTierとして扱われます。それ以外の未定の画像は「未定」としてまとめ、黒いラベルで出ます。タイトルを入れている場合は、上部にその名前も入ります。</p>
 
       </div>
     </div>
@@ -786,7 +835,6 @@ function compactTiers() {
 
 function setTier(id, tier) {
   if (!state.ratings[id]) return;
-  if (state.ratings[id].p > 0) return; // 配置比較が終わるまではTierを付けられない
   state.ratings[id].tier = tier;
   compactTiers();
   if (pair && !tierCompatible(pair[0], pair[1])) pair = null;
@@ -1311,7 +1359,7 @@ const SHEET_TITLE_H = 64; // タイトルを入れたときの帯の高さ(px)
 /* Tierごとの範囲（先頭の順位〜末尾の順位）を求め、その範囲に入る未定の画像もそのTierとして扱う。
    どのTierの範囲にも入らない未定の画像は「未定」としてまとめ、黒いラベルで出す。
    Tier1, Tier2, …, 未定 の順にグループ分けし、各グループを10枚ごとの行に区切る */
-function buildTierRows(ranking) {
+function buildTierRows(ranking, tierNames) {
   const order = ranking.order;
   const ranges = {}; // tier番号 -> {min, max}（order内のインデックス）
   order.forEach((id, i) => {
@@ -1321,6 +1369,7 @@ function buildTierRows(ranking) {
     else { ranges[t].min = Math.min(ranges[t].min, i); ranges[t].max = Math.max(ranges[t].max, i); }
   });
   const tiers = Object.keys(ranges).map(Number).sort((a, b) => a - b);
+  const maxT = tiers.length ? Math.max(...tiers) : 0;
 
   const covered = new Set();
   for (const t of tiers) { const { min, max } = ranges[t]; for (let i = min; i <= max; i++) covered.add(i); }
@@ -1335,14 +1384,28 @@ function buildTierRows(ranking) {
 
   const rows = [];
   for (const g of groups) {
+    const label = g.tier === null ? "未定" : (tierNames && tierNames[g.tier]) || `Tier ${g.tier}`;
+    const color = g.tier === null ? "#000000" : tierColor(g.tier, maxT);
     for (let i = 0; i < g.ids.length; i += SHEET_COLS) {
-      rows.push({ tier: g.tier, ids: g.ids.slice(i, i + SHEET_COLS) });
+      rows.push({ ids: g.ids.slice(i, i + SHEET_COLS), label, color });
     }
   }
   return rows;
 }
 
-async function buildSheet(rows, maxT, ranking, title) {
+/* Tierが1つも無いときの、これまでどおりの並び。10位刻みでTopの見出しを付け、
+   最後の行が10枚に満たなくても見出しは10の倍数に切り上げる。色は行の位置で虹色に変える */
+function buildTopNRows(order) {
+  const rowCount = Math.ceil(order.length / SHEET_COLS);
+  const rows = [];
+  for (let r = 0; r < rowCount; r++) {
+    const ids = order.slice(r * SHEET_COLS, r * SHEET_COLS + SHEET_COLS);
+    rows.push({ ids, label: `Top${(r + 1) * SHEET_COLS}`, color: tierColor(r + 1, rowCount) });
+  }
+  return rows;
+}
+
+async function buildSheet(rows, ranking, title) {
   const cellH    = Math.round(SHEET_CELL_W / currentAspect()); // 今のリサイズ比率に合わせた1マスの高さ
   const rowCount = rows.length;
   const width    = SHEET_LABEL_W + SHEET_COLS * SHEET_CELL_W;
@@ -1366,18 +1429,17 @@ async function buildSheet(rows, maxT, ranking, title) {
   }
 
   for (let r = 0; r < rowCount; r++) {
-    const { tier, ids } = rows[r];
+    const { ids, label, color } = rows[r];
     const y = titleH + r * cellH;
 
-    // 見出し。同じTierが複数行にまたがる場合も、色とラベルはTierごとに揃える。
-    // 未定はどのTierの範囲にも入らなかった画像で、黒いラベルにする
-    ctx.fillStyle = tier === null ? "#000000" : tierColor(tier, maxT);
+    // 見出し。ラベルと色はそれぞれのビルダーがあらかじめ決めている
+    ctx.fillStyle = color;
     ctx.fillRect(0, y, SHEET_LABEL_W, cellH);
     ctx.fillStyle = "#FFFFFF";
     ctx.font = "bold 26px 'Zen Kaku Gothic New', sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(tier === null ? "未定" : `Tier ${tier}`, SHEET_LABEL_W / 2, y + cellH / 2);
+    ctx.fillText(label, SHEET_LABEL_W / 2, y + cellH / 2);
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
 
@@ -1419,15 +1481,16 @@ async function buildSheet(rows, maxT, ranking, title) {
   return new Promise(resolve => canvas.toBlob(resolve, "image/png"));
 }
 
-async function exportSheets() {
+/* シートを実際に作る。tierNames は {tier番号: 名前} の対応表。省略時は「Tier N」のまま。
+   Tierが1つも無ければ、これまでどおりTop10・Top20…の並びにする */
+async function runExportSheets(tierNames) {
   const ranking = makeRanking();
-  const maxT = maxTier();
-  const rows = buildTierRows(ranking);
+  const rows = maxTier() === 0 ? buildTopNRows(ranking.order) : buildTierRows(ranking, tierNames);
   if (!rows.length) { showMessage("画像がありません"); return; }
   showMessage("シートを作成中…");
 
   const title = (state.title || "").trim();
-  const blob = await buildSheet(rows, maxT, ranking, title ? `${title}ランキング` : "");
+  const blob = await buildSheet(rows, ranking, title ? `${title}ランキング` : "");
   const filename = titledFilename("png");
   try {
     await downloadFile(filename, blob);
@@ -1436,6 +1499,56 @@ async function exportSheets() {
     showMessage("シートを保存できませんでした");
   }
 }
+
+/* 「シート作成」の入口。Tierが1つもなければ、名前を聞かずそのまま作る */
+function exportSheets() {
+  const maxT = maxTier();
+  if (maxT === 0) { runExportSheets({}); return; }
+
+  $("tierNameQuestion").hidden = false;
+  $("tierNameForm").hidden = true;
+  $("tierNameOverlay").hidden = false;
+}
+
+function openTierNameForm() {
+  const maxT = maxTier();
+  const box = $("tierNameInputs");
+  box.textContent = "";
+  for (let t = 1; t <= maxT; t++) {
+    const row = document.createElement("div");
+    row.className = "tier-name-row";
+    const label = document.createElement("label");
+    label.textContent = `Tier ${t}`;
+    label.htmlFor = `tierNameInput${t}`;
+    const input = document.createElement("input");
+    input.type = "text";
+    input.id = `tierNameInput${t}`;
+    input.placeholder = `Tier ${t}`;
+    input.maxLength = 20;
+    row.append(label, input);
+    box.append(row);
+  }
+  $("tierNameQuestion").hidden = true;
+  $("tierNameForm").hidden = false;
+}
+
+function collectTierNamesAndExport() {
+  const maxT = maxTier();
+  const names = {};
+  for (let t = 1; t <= maxT; t++) {
+    const v = $(`tierNameInput${t}`).value.trim();
+    if (v) names[t] = v;
+  }
+  $("tierNameOverlay").hidden = true;
+  runExportSheets(names);
+}
+
+$("tierNameSkip").addEventListener("click", () => { $("tierNameOverlay").hidden = true; runExportSheets({}); });
+$("tierNameYes").addEventListener("click", openTierNameForm);
+$("tierNameBack").addEventListener("click", () => { $("tierNameQuestion").hidden = false; $("tierNameForm").hidden = true; });
+$("tierNameGo").addEventListener("click", collectTierNamesAndExport);
+$("tierNameClose").addEventListener("click", () => { $("tierNameOverlay").hidden = true; });
+$("tierNameOverlay").addEventListener("click", e => { if (e.target === $("tierNameOverlay")) $("tierNameOverlay").hidden = true; });
 
 /* ==================================================================
    サンプル
@@ -1712,12 +1825,9 @@ function makeListItem(id, index, ranking) {
   const ribbon = document.createElement("button");
   const tier = getTier(id);
   const mt = maxTier();
-  const placing = item.p > 0;
   ribbon.className = "tier-ribbon" + (tier !== null ? " assigned" : "");
-  ribbon.textContent = placing ? "配置比較中" : tier !== null ? `Tier ${tier}` : "Tierを設定";
+  ribbon.textContent = tier !== null ? `Tier ${tier}` : "Tierを設定";
   ribbon.style.background = tier !== null ? tierColor(tier, mt) : "";
-  ribbon.disabled = placing;
-  ribbon.title = placing ? "配置比較が終わるまではTierを付けられません" : "";
   ribbon.addEventListener("click", () => openTierMenu(id, ribbon));
 
   const thumb = document.createElement("div");
@@ -1838,6 +1948,7 @@ $("nameBtn").addEventListener("click", () => {
 document.addEventListener("keydown", e => {
   if (e.target.tagName === "INPUT") return;
   if (!helpOverlay.hidden) { if (e.key === "Escape") helpOverlay.hidden = true; return; }
+  if (!$("tierNameOverlay").hidden) { if (e.key === "Escape") $("tierNameOverlay").hidden = true; return; }
   const key = e.key;
   if (pair && key === "ArrowLeft")  { e.preventDefault(); answer(RESULT.LEFT); }
   else if (pair && key === "ArrowRight") { e.preventDefault(); answer(RESULT.RIGHT); }
