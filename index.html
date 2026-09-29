@@ -142,6 +142,21 @@
       font-size: .9rem;
     }
 
+    .progress-track {
+      margin-top: 8px;
+      height: 8px;
+      border-radius: 4px;
+      background: var(--line);
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--blue);
+      transition: width .15s ease;
+    }
+    @media (prefers-reduced-motion: reduce) { .progress-bar { transition: none; } }
+
     /* ================================================================
        画像がないときの案内
        ================================================================ */
@@ -564,12 +579,17 @@
         </div>
       </span>
       <button class="btn" id="sheetBtn">シート作成</button>
+      <button class="btn" id="nameBtn">名前を隠す</button>
       <button class="btn" id="resetAllRatingsBtn">全初期化</button>
       <button class="btn danger" id="resetBtn">すべて削除</button>
     </div>
   </header>
 
   <p class="note" id="status"></p>
+  <div class="progress-track" id="progressTrack" hidden>
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+  <p class="note" id="progressLabel" hidden></p>
   <input type="file" id="imageInput" accept="image/*" multiple hidden>
   <input type="file" id="importInput" accept=".json,application/json" hidden>
 
@@ -636,7 +656,10 @@
         <p>「画像を追加」から選ぶか、ページに画像をドラッグ＆ドロップします。追加した画像は、まず4回の「配置比較」を行い、幅広い相手と比べることで大まかな位置を決めます。</p>
 
         <h3>リサイズ</h3>
-        <p>「リサイズ」で、画像を保存するときの縦横比を4:3（既定）・1:1・3:4から選べます。選んだ比率に合わせて中央から切り出して保存するので、比較画面や一覧、Tier表シートでの見え方が画像ごとにばらつきません。ここで選んだ比率は、これから追加する画像にだけ効き、すでに追加した画像には遡って適用されません。</p>
+        <p>「リサイズ」で、画像を保存するときの縦横比を4:3（既定）・1:1・3:4から選べます。選んだ比率に合わせて中央から切り出して保存するので、比較画面や一覧、Tier表シートでの見え方が画像ごとにばらつきません。ここで選んだ比率は、これから追加する画像にだけ効き、すでに追加した画像やサンプルには遡って適用されません。</p>
+
+        <h3>名前の表示</h3>
+        <p>「名前を隠す」で、比較画面と一覧の両方から画像の名前を消せます。ファイル名をそのまま使っていて見た目が良くない場合などに使えます。既定は表示ありで、もう一度押すと戻ります。</p>
 
         <h3>二択で比較する</h3>
         <p>好きなほうの画像を押して選びます。キーボードでも操作できます。</p>
@@ -669,7 +692,7 @@
         <p>「保存」で、画像と順位をまとめて1つのファイルに書き出せます。「読み込み」でそのファイルから復元できます。読み込みは今のデータを置き換えるので、データがあるときは確認のため2回押す必要があります。保存先を選べるブラウザでは、書き出す場所をその場で尋ねます。選べないブラウザでは、既定のダウンロード先に保存されます。</p>
 
         <h3>サンプル</h3>
-        <p>あらかじめ用意された画像セットがある場合、「サンプル」ボタンが表示されます。押すと20枚・50枚・100枚から件数を選べるので、試したい枚数を選んでください。これも今のデータを置き換えます。</p>
+        <p>あらかじめ用意された画像セットがある場合、「サンプル」ボタンが表示されます。押すと20枚・50枚・100枚から件数を選べるので、試したい枚数を選んでください。これも今のデータを置き換えます。サンプルはあらかじめ用意されたサイズのまま使うので、リサイズの設定は効きません。読み込み中は進捗バーが出ます。</p>
 
         <h3>Tier表シートの書き出し</h3>
         <p>「シート作成」で、現在の順位を10列に並べた1枚のPNG画像を書き出せます。各行の左には10位刻みの見出しが付き、1行目から最終行に向けて色が虹色に変わります。タイトルを入れている場合は、上部にその名前も入ります。</p>
@@ -723,6 +746,7 @@ let recentKeys = [];    // 直近に出題した組み合わせ（同じ組が�
 const wasRecentlyPaired = (a, b) => recentKeys.includes(pairKey(a, b));
 let focus     = null;   // 集中比較 { id, left, used }
 let showPower = true;   // 比較画面に強さを表示するか
+let showNames = true;   // 比較画面・一覧に名前を表示するか（ファイル名がそのまま出ている場合などに隠せる）
 let storageOK = true;
 const urls    = {};     // 画像id → 表示用URL
 
@@ -1046,6 +1070,9 @@ async function addImages(files) {
   const startRating = mean(allIds().map(id => state.ratings[id].r));
 
   // 1枚ずつ順番に待つと画像の枚数だけ時間がかかるので、縮小と保存はまとめて並行に進める
+  let done = 0;
+  const total = images.length;
+  if (total > 1) setProgress(0, total);
   await Promise.all(images.map(async file => {
     const blob = await shrinkImage(file);
     const id = newId();
@@ -1053,7 +1080,10 @@ async function addImages(files) {
     await db("images", "readwrite", s => s.put({ id, blob }));
     state.names[id] = file.name.replace(/\.[^.]+$/, "");
     state.ratings[id] = { r: startRating, rd: RD_START, n: 0, p: PLACEMENT_N, w: PLACEMENT_WIDE_N, last: state.t };
+    done++;
+    if (total > 1) setProgress(done, total);
   }));
+  clearProgress();
   // 最初の1枚だけのときは比べる相手がいないので、配置比較なしで置く
   if (isFirst && images.length === 1) { const only = state.ratings[allIds()[0]]; only.p = 0; only.w = 0; }
 
@@ -1482,22 +1512,44 @@ async function loadSamples(count) {
   showMessage("サンプルを読み込み中…");
   const entries = sampleList.slice(0, count);
 
-  // 1枚ずつ順番に取りに行くと枚数分の待ち時間が積み重なるので、まとめて並行に取得する
-  const files = (await Promise.all(entries.map(async entry => {
+  // サンプルはあらかじめリサイズ済みなので、通常の追加処理（縮小のやり直し）を経由せず、
+  // 取得した画像をそのまま保存する。取得も1件ずつ待たず、まとめて並行に進める
+  let done = 0;
+  const total = entries.length;
+  setProgress(0, total);
+  const loaded = await Promise.all(entries.map(async entry => {
     try {
       const res = await fetch(SAMPLE_DIR + entry.file);
       if (!res.ok) return null;
       const blob = await res.blob();
-      const ext = entry.file.match(/\.[^.]+$/)?.[0] || ".jpg";
-      return new File([blob], (entry.name || entry.file.replace(/\.[^.]+$/, "")) + ext, { type: blob.type || "image/jpeg" });
+      return { blob, name: entry.name || entry.file.replace(/\.[^.]+$/, "") };
     } catch (e) {
       return null; // 読めない画像は飛ばす
+    } finally {
+      done++;
+      setProgress(done, total);
     }
-  }))).filter(Boolean);
+  }));
 
-  if (!files.length) { showMessage("サンプルを読み込めませんでした"); return; }
+  const ok = loaded.filter(Boolean);
+  clearProgress();
+  if (!ok.length) { showMessage("サンプルを読み込めませんでした"); return; }
+
   await deleteAll();
-  await addImages(files);
+  const p = ok.length > 1 ? PLACEMENT_N : 0;
+  const w = ok.length > 1 ? PLACEMENT_WIDE_N : 0;
+  for (const { blob, name } of ok) {
+    const id = newId();
+    urls[id] = URL.createObjectURL(blob);
+    await db("images", "readwrite", s => s.put({ id, blob }));
+    state.names[id] = name;
+    state.ratings[id] = { r: RATING_START, rd: RD_START, n: 0, p, w, last: state.t };
+  }
+
+  message = "";
+  pair = null;
+  saveState();
+  render();
 }
 
 $("sampleBtn").addEventListener("click", () => {
@@ -1548,6 +1600,18 @@ function showMessage(text) {
   render(true);
   clearTimeout(messageTimer);
   messageTimer = setTimeout(() => { message = ""; render(true); }, 3000);
+}
+
+/* 何枚中どこまで終わったかを示す進捗バー。addImages と loadSamples から使う */
+function setProgress(done, total) {
+  $("progressTrack").hidden = false;
+  $("progressLabel").hidden = false;
+  $("progressBar").style.width = `${total ? Math.round((done / total) * 100) : 0}%`;
+  $("progressLabel").textContent = `${done} / ${total} 件`;
+}
+function clearProgress() {
+  $("progressTrack").hidden = true;
+  $("progressLabel").hidden = true;
 }
 
 /* 配置比較の完了など、見落としたくない知らせは、上部の小さな文字ではなく
@@ -1637,7 +1701,7 @@ function renderArena(ranking) {
     const item = state.ratings[id];
     card.querySelector("img").src = urls[id] || "";
     card.querySelector("img").alt = state.names[id] || "";
-    card.querySelector(".name").textContent = state.names[id] || "";
+    card.querySelector(".name").textContent = showNames ? (state.names[id] || "") : "";
     card.querySelector(".power").textContent = !showPower ? ""
       : item.p > 0 ? placementText(item)
       : `${powerText(id, ranking)}・${ranking.rank[id] + 1}位`;
@@ -1674,7 +1738,7 @@ function makeListItem(id, index, ranking) {
 
   const name = document.createElement("div");
   name.className = "name";
-  name.textContent = state.names[id] || "";
+  name.textContent = showNames ? (state.names[id] || "") : "";
 
   const meta = document.createElement("div");
   meta.className = "meta";
@@ -1774,6 +1838,11 @@ $("leftCard").addEventListener("click",  () => answer(RESULT.LEFT));
 $("rightCard").addEventListener("click", () => answer(RESULT.RIGHT));
 $("tieBtn").addEventListener("click",    () => answer(RESULT.TIE));
 $("powerBtn").addEventListener("click",  () => { showPower = !showPower; render(true); });
+$("nameBtn").addEventListener("click", () => {
+  showNames = !showNames;
+  $("nameBtn").textContent = showNames ? "名前を隠す" : "名前を表示";
+  render(true);
+});
 
 document.addEventListener("keydown", e => {
   if (e.target.tagName === "INPUT") return;
