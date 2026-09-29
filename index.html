@@ -362,6 +362,7 @@
     .item-actions .danger { color: var(--red); }
     .item-actions .wide   { grid-column: 1 / -1; }
     .item-actions .move   { font-weight: 700; }
+    .item-actions .lock.active { background: var(--blue); border-color: var(--blue); color: var(--on-blue); }
 
     @media (max-width: 480px) {
       .duel { gap: 6px; }
@@ -736,6 +737,9 @@
         <p>一覧の各画像の上にあるリボンで、Tierを設定できます。Tierは1から始まる番号で、番号が小さいほうが必ず上位になります。異なるTier同士は二択にも自動の出題にも出ず、順位が入れ替わることもありません。Tierが未定の画像は、どのTierとも比較でき、順位表でもどこにでも入り込めます。</p>
         <p>選べる番号は「今ある最大のTier番号+1」までで、途中を飛ばして作ることはできません。途中のTierを全員未定に戻すと、後ろの番号は自動的に繰り上がって詰まります。比較の回数に関係なく、いつでもTierを設定できます。</p>
 
+        <h3>ロック</h3>
+        <p>一覧の「ロック」ボタンで、まとめてロック・解除ができます。ロック中の画像は二択にも自動の出題にも出ず、順位の入れ替えもできません。</p>
+
         <h3>画像の全初期化・削除</h3>
         <p>「全初期化」は、画像はすべて残したまま、全員のレートと比較の記録だけを消して新規追加と同じ状態に戻します。Tierの割り当てもすべて未定に戻ります。「削除」は画像ごと消します。いずれも誤操作を防ぐため、続けて2回押すと実行されます。</p>
 
@@ -818,7 +822,9 @@ const tierCompatible = (a, b) => {
   const ta = getTier(a), tb = getTier(b);
   return ta === null || tb === null || ta === tb;
 };
-const hasPartner = id => allIds().some(b => b !== id && tierCompatible(id, b));
+/* ---- ロック ---- */
+const isLocked = id => !!(state.ratings[id] && state.ratings[id].locked);
+const hasPartner = id => allIds().some(b => b !== id && !isLocked(b) && tierCompatible(id, b));
 // Tier表シートの行の色と同じ虹の配色。tierNum は1始まり、maxT は今の最大Tier
 const tierColor = (tierNum, maxT) => `hsl(${maxT > 1 ? ((tierNum - 1) / (maxT - 1)) * 270 : 0}, 70%, 42%)`;
 
@@ -838,6 +844,39 @@ function setTier(id, tier) {
   state.ratings[id].tier = tier;
   compactTiers();
   if (pair && !tierCompatible(pair[0], pair[1])) pair = null;
+  saveState();
+  render();
+}
+
+/* まとめてロック・解除。TierとLockは独立の仕組みで、ロックはTierをまたいでよい。
+   ロック中の画像は二択・自動出題・手動の順位入れ替えの対象から外れる */
+function toggleLock(id) {
+  if (!state.ratings[id]) return;
+  const ranking = makeRanking();
+  const order = ranking.order;
+  const pos = ranking.rank[id];
+  const n = order.length;
+  const distTop = pos, distBottom = n - 1 - pos;
+
+  if (!isLocked(id)) {
+    // 未ロック→ロック：押した位置から見て近いほうの端までを一括ロック（同数なら上側優先）
+    const range = distTop <= distBottom ? order.slice(0, pos + 1) : order.slice(pos, n);
+    range.forEach(rid => { state.ratings[rid].locked = true; });
+  } else if (order.every(isLocked)) {
+    // 全画像ロック中の特殊ケース：押した位置から近いほうの端までを解除（同数なら下側優先）
+    const range = distTop < distBottom ? order.slice(0, pos + 1) : order.slice(pos, n);
+    range.forEach(rid => { state.ratings[rid].locked = false; });
+  } else {
+    // 通常：ロックされた塊のうち、未ロック範囲に接する内側の端から押した位置までを解除
+    let start = pos, end = pos;
+    while (start > 0 && isLocked(order[start - 1])) start--;
+    while (end < n - 1 && isLocked(order[end + 1])) end++;
+    const innerEdge = start === 0 ? end : start;
+    const from = Math.min(innerEdge, pos), to = Math.max(innerEdge, pos);
+    for (let i = from; i <= to; i++) state.ratings[order[i]].locked = false;
+  }
+
+  if (pair && (isLocked(pair[0]) || isLocked(pair[1]))) pair = null;
   saveState();
   render();
 }
@@ -964,7 +1003,7 @@ function applyResult(a, b, scoreA) {
    該当がなければ、レートが近い順に3枚を返す */
 function findOpponents(a, low, high, exclude = []) {
   const A = state.ratings[a];
-  const candidates = allIds().filter(b => b !== a && tierCompatible(a, b));
+  const candidates = allIds().filter(b => b !== a && tierCompatible(a, b) && !isLocked(b));
   let others = candidates.filter(b => !exclude.includes(b) && !wasRecentlyPaired(a, b));
   // 直近の組み合わせを避けきれない場合は、まず重複回避だけを緩め、それでも無ければ制約をすべて緩める
   // （Tierが違う相手まで広げることはしない）
@@ -995,8 +1034,8 @@ function pickWaitingPair(counterKey, ids) {
 }
 
 function pickPair() {
-  // 比較できる相手が誰もいない画像（Tierが独りぼっちで、未定の画像も無い）は対象から外す
-  const ids = allIds().filter(hasPartner);
+  // 比較できる相手が誰もいない画像（Tierが独りぼっちで、未定の画像も無い）やロック中の画像は対象から外す
+  const ids = allIds().filter(id => !isLocked(id) && hasPartner(id));
   if (ids.length < 2) return null;
 
   // 優先度1：表示上の配置比較（p、4回）が残っている画像を、他の何よりも先に使い切る
@@ -1055,7 +1094,7 @@ function moveRank(id, dir) {
   const targetPos = pos + dir;
   if (targetPos < 0 || targetPos >= ranking.order.length) return;
   const otherId = ranking.order[targetPos];
-  if (!tierCompatible(id, otherId)) return;
+  if (!tierCompatible(id, otherId) || isLocked(id) || isLocked(otherId)) return;
 
   const before = { [id]: { ...state.ratings[id] }, [otherId]: { ...state.ratings[otherId] } };
   const swapR = state.ratings[id].r;
@@ -1114,7 +1153,7 @@ async function addImages(files) {
     urls[id] = URL.createObjectURL(blob);
     await db("images", "readwrite", s => s.put({ id, blob }));
     state.names[id] = file.name.replace(/\.[^.]+$/, "");
-    state.ratings[id] = { r: startRating, rd: RD_START, n: 0, p: PLACEMENT_N, w: PLACEMENT_WIDE_N, tier: null, last: state.t };
+    state.ratings[id] = { r: startRating, rd: RD_START, n: 0, p: PLACEMENT_N, w: PLACEMENT_WIDE_N, tier: null, locked: false, last: state.t };
     done++;
     if (total > 1) setProgress(done, total);
   }));
@@ -1148,7 +1187,7 @@ function resetAllRatings() {
   const p = ids.length > 1 ? PLACEMENT_N : 0;
   const w = ids.length > 1 ? PLACEMENT_WIDE_N : 0;
   for (const id of ids) {
-    state.ratings[id] = { r: RATING_START, rd: RD_START, n: 0, p, w, tier: null, last: state.t };
+    state.ratings[id] = { r: RATING_START, rd: RD_START, n: 0, p, w, tier: null, locked: false, last: state.t };
   }
   state.hist = [];
   pair = null;
@@ -1319,7 +1358,8 @@ function cleanUpState() {
   }
   for (const id of Object.keys(state.ratings)) {
     if (state.ratings[id].w === undefined) state.ratings[id].w = 0; // 古い保存データの互換
-    if (state.ratings[id].tier === undefined) state.ratings[id].tier = null; // 古い保存データの互換（ロックは引き継がない）
+    if (state.ratings[id].tier === undefined) state.ratings[id].tier = null; // 古い保存データの互換（旧ロックは引き継がない）
+    if (state.ratings[id].locked === undefined) state.ratings[id].locked = false;
   }
   delete state.lockedTop;    // 旧ロック機能の名残。Tierには引き継がない
   delete state.lockedBottom;
@@ -1624,7 +1664,7 @@ async function loadSamples(count) {
     urls[id] = URL.createObjectURL(blob);
     await db("images", "readwrite", s => s.put({ id, blob }));
     state.names[id] = name;
-    state.ratings[id] = { r: RATING_START, rd: RD_START, n: 0, p, w, tier: null, last: state.t };
+    state.ratings[id] = { r: RATING_START, rd: RD_START, n: 0, p, w, tier: null, locked: false, last: state.t };
   }
 
   message = "";
@@ -1786,7 +1826,7 @@ function renderStatus() {
   if (ids.length) {
     text = `登録 ${ids.length}件、比較 ${state.t}回`;
     if (placing) text += `、配置比較中 ${placing}件`;
-    if (ids.length >= 2 && allIds().filter(hasPartner).length < 2) text += "。比較できる組み合わせがありません";
+    if (ids.length >= 2 && allIds().filter(id => !isLocked(id) && hasPartner(id)).length < 2) text += "。比較できる組み合わせがありません";
   }
   if (!storageOK) text += "。この環境では保存できないため、閉じると消えます";
   $("status").textContent = message || text;
@@ -1855,25 +1895,32 @@ function makeListItem(id, index, ranking) {
   actions.className = "item-actions";
 
   const deleteBtn = document.createElement("button");
-  deleteBtn.className = "danger wide";
+  deleteBtn.className = "danger";
   deleteBtn.textContent = "削除";
   deleteBtn.addEventListener("click", () => deleteImage(id));
+
+  const locked = isLocked(id);
+  const lockBtn = document.createElement("button");
+  lockBtn.className = "lock" + (locked ? " active" : "");
+  lockBtn.textContent = locked ? "解除" : "ロック";
+  lockBtn.title = locked ? "ロックを解除する" : "この位置までまとめてロックする";
+  lockBtn.addEventListener("click", () => toggleLock(id));
 
   const leftBtn = document.createElement("button");
   leftBtn.className = "move";
   leftBtn.textContent = "←";
   leftBtn.title = "ひとつ前の順位に入れ替える";
-  leftBtn.disabled = index === 0 || !tierCompatible(id, ranking.order[index - 1]);
+  leftBtn.disabled = index === 0 || !tierCompatible(id, ranking.order[index - 1]) || locked || isLocked(ranking.order[index - 1]);
   leftBtn.addEventListener("click", () => moveRank(id, -1));
 
   const rightBtn = document.createElement("button");
   rightBtn.className = "move";
   rightBtn.textContent = "→";
   rightBtn.title = "ひとつ後ろの順位に入れ替える";
-  rightBtn.disabled = index === ranking.order.length - 1 || !tierCompatible(id, ranking.order[index + 1]);
+  rightBtn.disabled = index === ranking.order.length - 1 || !tierCompatible(id, ranking.order[index + 1]) || locked || isLocked(ranking.order[index + 1]);
   rightBtn.addEventListener("click", () => moveRank(id, 1));
 
-  actions.append(deleteBtn, leftBtn, rightBtn);
+  actions.append(deleteBtn, lockBtn, leftBtn, rightBtn);
   li.append(ribbon, thumb, name, meta, actions);
   return li;
 }
@@ -2000,7 +2047,7 @@ function migrateOldState(saved) {
   const next = emptyState();
   next.names = names;
   ids.forEach((id, i) => {
-    next.ratings[id] = { r: RATING_START + 400 * Math.log10(strength[i]), rd: 200, n: count[i], p: 0, w: 0, tier: null, last: 0 };
+    next.ratings[id] = { r: RATING_START + 400 * Math.log10(strength[i]), rd: 200, n: count[i], p: 0, w: 0, tier: null, locked: false, last: 0 };
   });
   return next;
 }
