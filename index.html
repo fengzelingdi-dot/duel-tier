@@ -92,14 +92,16 @@
 
     .title-row {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: 8px;
       margin-top: 10px;
       font-size: 1rem;
     }
-    .title-row label { color: var(--ink); }
+    .title-row label { color: var(--ink); white-space: nowrap; }
     .title-row input {
-      flex: 1;
+      flex: 1 1 140px;
+      min-width: 120px;
       max-width: 260px;
       padding: 6px 10px;
       border: 2px solid var(--line);
@@ -110,8 +112,8 @@
       font-weight: 700;
     }
     .title-row input:focus-visible { outline: 3px solid var(--blue); outline-offset: 1px; }
-    .title-row .title-suffix { color: var(--ink); }
-    .title-row #helpBtn { margin-left: 8px; }
+    .title-row .title-suffix { color: var(--ink); white-space: nowrap; }
+    .title-row #helpBtn { margin-left: 8px; white-space: nowrap; }
 
     .toolbar {
       display: flex;
@@ -149,7 +151,7 @@
       border: 2px dashed var(--line);
       border-radius: 14px;
       color: var(--sub);
-      text-align: center;
+      text-align: left;
     }
     body.dragging main {
       outline: 3px dashed var(--blue);
@@ -207,6 +209,25 @@
       color: var(--ink);
       font-weight: 700;
       font-size: 3.4rem;
+    }
+
+    .card-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+    .card-col .card { flex: 1; }
+    .card-del {
+      align-self: center;
+      padding: 5px 14px;
+      border: 2px solid var(--red);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--red);
+      font-size: .85rem;
+      font-weight: 700;
+      cursor: pointer;
     }
 
     .card {
@@ -521,8 +542,7 @@
   <header>
     <h1>二択式ランキングメーカー</h1>
     <div class="title-row">
-      <label for="titleInput">タイトル</label>
-      <input type="text" id="titleInput" placeholder="例：好きな漫画" maxlength="40">
+      <input type="text" id="titleInput" aria-label="タイトル" placeholder="例：好きな漫画" maxlength="40">
       <span class="title-suffix">ランキング</span>
       <button class="btn" id="helpBtn">使い方</button>
     </div>
@@ -570,17 +590,23 @@
     </div>
 
     <div class="duel">
-      <button class="card" id="leftCard">
-        <img alt="">
-        <span class="name"></span>
-        <span class="power"></span>
-      </button>
+      <div class="card-col">
+        <button class="card" id="leftCard">
+          <img alt="">
+          <span class="name"></span>
+          <span class="power"></span>
+        </button>
+        <button class="card-del" id="leftDeleteBtn" hidden>削除</button>
+      </div>
       <div class="vs">VS</div>
-      <button class="card" id="rightCard">
-        <img alt="">
-        <span class="name"></span>
-        <span class="power"></span>
-      </button>
+      <div class="card-col">
+        <button class="card" id="rightCard">
+          <img alt="">
+          <span class="name"></span>
+          <span class="power"></span>
+        </button>
+        <button class="card-del" id="rightDeleteBtn" hidden>削除</button>
+      </div>
     </div>
 
     <div class="arena-actions">
@@ -619,6 +645,7 @@
           <li><kbd>↓</kbd>：同じくらい（両方に半分ずつ点を入れる）</li>
           <li><kbd>Z</kbd>：ひとつ前の回答を取り消す（Undoボタンと同じ）</li>
         </ul>
+        <p>まだ一度も比較していない画像には、カードの下に「削除」が出ます。知らない作品が出てきたときなど、一覧まで戻らずその場で消せます。一度でも比較すると、この削除ボタンは出なくなります。</p>
         <p>比較のたびに、双方の「強さ」という数値が動きます。強さは、平均的な画像と比べたときの予想勝率を0〜100で表したものです。数値の後ろの括弧は、その数値がどれくらいの幅で動きうるかを示しています。</p>
 
         <h3>集中比較</h3>
@@ -661,11 +688,13 @@ const RATING_START   = 1500;  // 最初の画像のレート
 const RD_START       = 350;   // 新しい画像の信頼幅（最大値）
 const RD_MIN         = 50;    // 信頼幅の下限
 const RD_GROWTH      = 25;    // 比較されない間に信頼幅が広がる速さ
-const PLACEMENT_N    = 4;     // 新しい画像の配置比較の回数
+const PLACEMENT_N    = 4;     // 新しい画像の配置比較の回数（表示や強さの公開はここまで）
+const PLACEMENT_WIDE_N = 7;   // 幅広い相手と当てる期間（表示には出さず、内部の挙動だけ長く続ける）
 const FOCUS_N        = 10;    // 集中比較の回数
 const FOCUS_FAR_N    = 6;     // うち、レートが少し離れた相手と比べる回数
 const HISTORY_MAX    = 300;   // Undo で戻れる回数
 const STABILITY_SPAN = 20;    // 順位変動を測る直近の比較数
+const RECENT_KEYS_MAX = 10;   // 同じ組み合わせを避けておく直近の回数
 // 保存する画像の縦横比（幅 / 高さ）。ラベルは「縦:横」の言い方に合わせている
 const RESIZE_RATIOS  = { "4:3": 3 / 4, "1:1": 1, "3:4": 4 / 3 };
 const RESIZE_DEFAULT = "4:3";
@@ -690,7 +719,8 @@ const emptyState = () => ({ version: 3, names: {}, ratings: {}, t: 0, hist: [], 
 
 let state     = emptyState();
 let pair      = null;   // いま表示している2枚 [左, 右]
-let lastKey   = "";     // 直前の組（同じ組が続かないように）
+let recentKeys = [];    // 直近に出題した組み合わせ（同じ組が短期間で続かないように）
+const wasRecentlyPaired = (a, b) => recentKeys.includes(pairKey(a, b));
 let focus     = null;   // 集中比較 { id, left, used }
 let showPower = true;   // 比較画面に強さを表示するか
 let storageOK = true;
@@ -814,6 +844,7 @@ function applyResult(a, b, scoreA) {
     item.n++;
     item.last = state.t + 1;
     if (item.p > 0) item.p--;
+    if (item.w > 0) item.w--;
   }
   state.t++;
 }
@@ -826,8 +857,10 @@ function applyResult(a, b, scoreA) {
    該当がなければ、レートが近い順に3枚を返す */
 function findOpponents(a, low, high, exclude = []) {
   const A = state.ratings[a];
-  let others = unlockedIds().filter(b => b !== a && !exclude.includes(b) && pairKey(a, b) !== lastKey);
-  if (!others.length) others = unlockedIds().filter(b => b !== a); // 候補が尽きた場合は制約を緩めて必ず1枚は残す
+  let others = unlockedIds().filter(b => b !== a && !exclude.includes(b) && !wasRecentlyPaired(a, b));
+  // 直近の組み合わせを避けきれない場合は、まず重複回避だけを緩め、それでも無ければ制約をすべて緩める
+  if (!others.length) others = unlockedIds().filter(b => b !== a && !exclude.includes(b));
+  if (!others.length) others = unlockedIds().filter(b => b !== a);
   const inRange = others.filter(b => {
     const e = expectedWin(A.r, state.ratings[b].r);
     return e >= low && e <= high;
@@ -867,6 +900,18 @@ function pickFocusPair() {
   return [a, b];
 }
 
+/* counterKey は "p"（表示用、優先度1）か "w"（裏の幅広い比較、優先度2）。
+   そのカウンターがまだ残っている画像を対象に選び、相手は同じカウンターを使い切った
+   画像を優先しつつ、予想勝率20〜80%の幅広い範囲から選ぶ */
+function pickWaitingPair(counterKey, ids) {
+  const waiting = ids.filter(id => state.ratings[id][counterKey] > 0);
+  if (!waiting.length || waiting.length >= ids.length) return null;
+  const a = pickRandom(waiting);
+  const settled = findOpponents(a, 0.2, 0.8).filter(b => state.ratings[b][counterKey] === 0);
+  const b = settled.length ? pickRandom(settled) : pickRandom(findOpponents(a, 0.2, 0.8));
+  return shuffleSides([a, b]);
+}
+
 function pickPair() {
   const ids = unlockedIds();
   if (ids.length < 2) return null; // ロックされていない画像が2枚に満たない場合は比較できない
@@ -874,14 +919,13 @@ function pickPair() {
   if (focus && !state.ratings[focus.id]) focus = null; // 対象の画像が既に無い場合は集中比較をやめる
   if (focus) return pickFocusPair();
 
-  // 配置比較が残っている画像を優先。相手は予想勝率20〜80%の幅広い範囲から
-  const placing = ids.filter(id => state.ratings[id].p > 0);
-  if (placing.length && placing.length < ids.length) {
-    const a = pickRandom(placing);
-    const placed = findOpponents(a, 0.2, 0.8).filter(b => state.ratings[b].p === 0);
-    const b = placed.length ? pickRandom(placed) : pickRandom(findOpponents(a, 0.2, 0.8));
-    return shuffleSides([a, b]);
-  }
+  // 優先度1：表示上の配置比較（p、4回）が残っている画像を、他の何よりも先に使い切る
+  const placementPair = pickWaitingPair("p", ids);
+  if (placementPair) return placementPair;
+
+  // 優先度2：表示は終わったが、裏の幅広い当たり方（w、7回まで）がまだ残っている画像
+  const widePair = pickWaitingPair("w", ids);
+  if (widePair) return widePair;
 
   // 通常：信頼幅の2乗に比例する確率で対象を選び、相手は予想勝率30〜70%からランダム
   const weights = ids.map(id => currentRD(state.ratings[id]) ** 2);
@@ -902,7 +946,8 @@ const RESULT = { LEFT: 0, RIGHT: 1, TIE: 2 };
 function answer(result) {
   if (!pair) return;
   const [left, right] = pair;
-  lastKey = pairKey(left, right);
+  recentKeys.push(pairKey(left, right));
+  if (recentKeys.length > RECENT_KEYS_MAX) recentKeys.shift();
 
   const placingBefore = allIds().filter(id => state.ratings[id].p > 0).length;
   const before = { [left]: { ...state.ratings[left] }, [right]: { ...state.ratings[right] } };
@@ -970,6 +1015,8 @@ function undo() {
     if (state.ratings[id]) state.ratings[id] = last.before[id];
   }
   state.t = Math.max(0, state.t - 1);
+  const lastKeyIndex = recentKeys.lastIndexOf(pairKey(last.a, last.b));
+  if (lastKeyIndex !== -1) recentKeys.splice(lastKeyIndex, 1);
 
   if (state.ratings[last.a] && state.ratings[last.b]) {
     pair = [last.a, last.b];
@@ -998,16 +1045,17 @@ async function addImages(files) {
   const isFirst = allIds().length === 0;
   const startRating = mean(allIds().map(id => state.ratings[id].r));
 
-  for (const file of images) {
+  // 1枚ずつ順番に待つと画像の枚数だけ時間がかかるので、縮小と保存はまとめて並行に進める
+  await Promise.all(images.map(async file => {
     const blob = await shrinkImage(file);
     const id = newId();
     urls[id] = URL.createObjectURL(blob);
     await db("images", "readwrite", s => s.put({ id, blob }));
     state.names[id] = file.name.replace(/\.[^.]+$/, "");
-    state.ratings[id] = { r: startRating, rd: RD_START, n: 0, p: PLACEMENT_N, last: state.t };
-  }
+    state.ratings[id] = { r: startRating, rd: RD_START, n: 0, p: PLACEMENT_N, w: PLACEMENT_WIDE_N, last: state.t };
+  }));
   // 最初の1枚だけのときは比べる相手がいないので、配置比較なしで置く
-  if (isFirst && images.length === 1) state.ratings[allIds()[0]].p = 0;
+  if (isFirst && images.length === 1) { const only = state.ratings[allIds()[0]]; only.p = 0; only.w = 0; }
 
   message = "";
   pair = null;
@@ -1034,8 +1082,9 @@ function deleteImage(id) {
 function resetAllRatings() {
   const ids = allIds();
   const p = ids.length > 1 ? PLACEMENT_N : 0;
+  const w = ids.length > 1 ? PLACEMENT_WIDE_N : 0;
   for (const id of ids) {
-    state.ratings[id] = { r: RATING_START, rd: RD_START, n: 0, p, last: state.t };
+    state.ratings[id] = { r: RATING_START, rd: RD_START, n: 0, p, w, last: state.t };
   }
   state.hist = [];
   state.lockedTop = [];
@@ -1256,6 +1305,9 @@ function cleanUpState() {
   for (const id of Object.keys(state.ratings)) {
     if (!(id in state.names)) delete state.ratings[id];
   }
+  for (const id of Object.keys(state.ratings)) {
+    if (state.ratings[id].w === undefined) state.ratings[id].w = 0; // 古い保存データの互換
+  }
   state.lockedTop = (state.lockedTop || []).filter(id => state.ratings[id]);
   state.lockedBottom = (state.lockedBottom || []).filter(id => state.ratings[id]);
   state.hist = state.hist.filter(h => state.ratings[h.a] && state.ratings[h.b]);
@@ -1429,18 +1481,20 @@ function renderSampleMenu() {
 async function loadSamples(count) {
   showMessage("サンプルを読み込み中…");
   const entries = sampleList.slice(0, count);
-  const files = [];
-  for (const entry of entries) {
+
+  // 1枚ずつ順番に取りに行くと枚数分の待ち時間が積み重なるので、まとめて並行に取得する
+  const files = (await Promise.all(entries.map(async entry => {
     try {
       const res = await fetch(SAMPLE_DIR + entry.file);
-      if (!res.ok) continue;
+      if (!res.ok) return null;
       const blob = await res.blob();
       const ext = entry.file.match(/\.[^.]+$/)?.[0] || ".jpg";
-      files.push(new File([blob], (entry.name || entry.file.replace(/\.[^.]+$/, "")) + ext, { type: blob.type || "image/jpeg" }));
+      return new File([blob], (entry.name || entry.file.replace(/\.[^.]+$/, "")) + ext, { type: blob.type || "image/jpeg" });
     } catch (e) {
-      // 読めない画像は飛ばす
+      return null; // 読めない画像は飛ばす
     }
-  }
+  }))).filter(Boolean);
+
   if (!files.length) { showMessage("サンプルを読み込めませんでした"); return; }
   await deleteAll();
   await addImages(files);
@@ -1576,7 +1630,10 @@ function renderArena(ranking) {
       `集中比較中：${state.names[focus.id]}（現在${ranking.rank[focus.id] + 1}位）あと${focus.left}回（${phase}）`;
   }
 
-  for (const [card, id] of [[$("leftCard"), pair[0]], [$("rightCard"), pair[1]]]) {
+  for (const [card, deleteBtn, id] of [
+    [$("leftCard"), $("leftDeleteBtn"), pair[0]],
+    [$("rightCard"), $("rightDeleteBtn"), pair[1]],
+  ]) {
     const item = state.ratings[id];
     card.querySelector("img").src = urls[id] || "";
     card.querySelector("img").alt = state.names[id] || "";
@@ -1584,6 +1641,10 @@ function renderArena(ranking) {
     card.querySelector(".power").textContent = !showPower ? ""
       : item.p > 0 ? placementText(item)
       : `${powerText(id, ranking)}・${ranking.rank[id] + 1}位`;
+
+    // 一度も比較していない画像だけ、その場で消せる削除ボタンを出す
+    deleteBtn.hidden = item.n > 0;
+    deleteBtn.onclick = () => deleteImage(id);
   }
   $("powerBtn").textContent = showPower ? "強さを隠す" : "強さを表示";
 }
@@ -1768,7 +1829,7 @@ function migrateOldState(saved) {
   const next = emptyState();
   next.names = names;
   ids.forEach((id, i) => {
-    next.ratings[id] = { r: RATING_START + 400 * Math.log10(strength[i]), rd: 200, n: count[i], p: 0, last: 0 };
+    next.ratings[id] = { r: RATING_START + 400 * Math.log10(strength[i]), rd: 200, n: count[i], p: 0, w: 0, last: 0 };
   });
   return next;
 }
