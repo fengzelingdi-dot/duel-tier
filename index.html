@@ -226,6 +226,7 @@
     }
     .card-col .card { flex: 1; }
     .card-del {
+      position: relative;
       align-self: center;
       padding: 5px 14px;
       border: 2px solid var(--red);
@@ -369,13 +370,15 @@
     .item-actions .danger { color: var(--red); }
     .item-actions .wide   { grid-column: 1 / -1; }
     .item-actions .move   { font-weight: 700; }
-    .item-actions .lock.active { background: var(--blue); border-color: var(--blue); color: var(--on-blue); }
+    .item-actions .lock.active { background: #D2A400; border-color: #D2A400; color: #FFFFFF; }
 
     .compact-row {
       display: flex;
       justify-content: center;
+      gap: 8px;
       margin-top: 20px;
     }
+    .btn.tier-reset { background: #000000; border-color: #000000; color: #FFFFFF; }
 
     @media (max-width: 480px) {
       .duel { gap: 6px; }
@@ -627,7 +630,6 @@
         </div>
       </span>
       <button class="btn" id="sheetBtn">シート作成</button>
-      <button class="btn" id="tierAddBtn">Tier追加</button>
       <button class="btn" id="nameBtn">名前を隠す</button>
       <button class="btn" id="resetAllRatingsBtn">全初期化</button>
       <button class="btn danger" id="resetBtn">すべて削除</button>
@@ -685,7 +687,9 @@
   <ol class="list" id="list"></ol>
 
   <div class="compact-row">
+    <button class="btn" id="tierAddBtn">Tier追加</button>
     <button class="btn" id="compactTiersBtn">Tierを詰める</button>
+    <button class="btn tier-reset" id="resetAllTiersBtn">Tier初期化</button>
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
@@ -751,10 +755,7 @@
         <p>「画像を追加」から選ぶか、ページに画像をドラッグ＆ドロップすると追加できます。</p>
 
         <h3>リサイズ</h3>
-        <p>「リサイズ」で、画像を保存するときの縦横比を4:3（既定）・1:1・3:4から選べます。選んだ比率に合わせて中央から切り出して保存するので、比較画面や一覧、Tier表シートでの見え方が画像ごとにばらつきません。</p>
-
-        <h3>名前の表示</h3>
-        <p>「名前を隠す」で、比較画面と一覧の両方から画像のファイル名を表示したり隠したりできます。</p>
+        <p>「リサイズ」で、画像を保存するときの縦横比を4:3（既定）・1:1・3:4から選べます。</p>
 
         <h3>二択で比較する</h3>
         <p>好きなほう、強いほうなど上位だと思う方を押して選びます。キーボードでも操作できます。</p>
@@ -763,16 +764,16 @@
           <li><kbd>↓</kbd>：同じくらい（両方に半分ずつ点を入れる）</li>
           <li><kbd>Z</kbd>：ひとつ前の回答を取り消す（Undoボタンと同じ）</li>
         </ul>
-        <p>比較のたびに、双方の「強さ」という数値が動きます。強さは、平均的な画像と比べたときの予想勝率を0〜100で表したものです。</p>
+        <p>比較のたびに、双方の「強さ」が動きます。</p>
 
         <h3>順位を手動で入れ替える</h3>
         <p>画像の枠をつかんでドラッグすると、離した位置まで順位を動かせます。一覧の「←」「→」ボタンでは、隣の順位の画像とちょうど1つだけ入れ替えられます。</p>
 
         <h3>Tier</h3>
-        <p>一覧の各画像の上にあるリボンで、Tierを設定できます。Tierは1から始まる番号で、番号が小さいほうが上位になります。ツールバーの「Tier追加」から、好きな位置に新しいTierの枠を挿入できます。順位一覧の下にある「Tierを詰める」を押すと、使われていない番号を取り除いて、実際に使われている番号だけで1から並べ直します。</p>
+        <p>一覧の各画像の上にあるリボンで、Tierを設定できます。Tierは1から始まり、番号が小さいほうが上位になります。ツールバーの「Tier追加」から、好きな位置に新しいTierの枠を挿入できます。順位一覧の下にある「Tierを詰める」を押すと、使われていない番号を取り除いて、実際に使われている番号だけで1から並べ直します。</p>
 
         <h3>ロック</h3>
-        <p>一覧の「ロック」ボタンで、まとめてロック・解除ができます。ロック中の画像は二択にも自動の出題にも出ず、順位の入れ替えもできません。</p>
+        <p>一覧の「ロック」ボタンで、まとめてロック・解除ができます。</p>
 
         <h3>画像の全初期化・削除</h3>
         <p>「全初期化」は、画像はすべて残したまま、全員のレート・比較の記録・Tierが消えます。「削除」は画像ごと消します。</p>
@@ -789,8 +790,11 @@
         <h3>Tier表シートの書き出し</h3>
         <p>Tierを1つも設定していない場合は、現在の順位を10位ごとに区切り、「Top10」「Top20」のような見出しで出力します。Tierが1つ以上ある場合は、先に「Tier 1」のままにするか、それぞれに名前を付けるかを聞かれます。名前を付けた場合、行の見出しはその名前になります。空欄のままにした番号は「Tier N」のままです。</p>
 
+        <h3>名前の表示</h3>
+        <p>「名前を隠す」で、比較画面と一覧の両方から画像のファイル名を表示したり隠したりできます。</p>
+
         <h3>このツールについて</h3>
-        <p>画像と順位は、この端末のこのブラウザの中だけに保存されます。どこにも送信されません。別の端末やブラウザで開いた場合、データは引き継がれません。</p>
+        <p>画像と順位は、この端末のこのブラウザの中だけに保存されます。別の端末やブラウザで開いた場合、データは引き継がれません。</p>
 
       </div>
     </div>
@@ -874,24 +878,58 @@ function clampToTierBand(id) {
   if (item.r < floor) item.r = floor;
 }
 
-/* 自分のTierがはみ出してはいけない上限・下限。1つ上/下のTierが無ければ範囲なし（±Infinity） */
+/* 自分のTierがはみ出してはいけない上限・下限。1つ上/下のTierだけでなく、
+   自分より番号が小さいTier全体の最低値・大きいTier全体の最高値を基準にする（無ければ範囲なし＝±Infinity） */
 function tierBandCeiling(id) {
   const t = getTier(id);
   if (t === null) return Infinity;
-  const used = [...new Set(allIds().map(getTier).filter(x => x !== null))].sort((a, b) => a - b);
-  const idx = used.indexOf(t);
-  if (idx <= 0) return Infinity;
-  const upperTier = used[idx - 1];
-  return Math.min(...allIds().filter(x => getTier(x) === upperTier).map(x => state.ratings[x].r)) - TIER_BAND_GAP;
+  const upper = allIds().filter(x => getTier(x) !== null && getTier(x) < t).map(x => state.ratings[x].r);
+  return upper.length ? Math.min(...upper) - TIER_BAND_GAP : Infinity;
 }
 function tierBandFloor(id) {
   const t = getTier(id);
   if (t === null) return -Infinity;
-  const used = [...new Set(allIds().map(getTier).filter(x => x !== null))].sort((a, b) => a - b);
-  const idx = used.indexOf(t);
-  if (idx >= used.length - 1) return -Infinity;
-  const lowerTier = used[idx + 1];
-  return Math.max(...allIds().filter(x => getTier(x) === lowerTier).map(x => state.ratings[x].r)) + TIER_BAND_GAP;
+  const lower = allIds().filter(x => getTier(x) !== null && getTier(x) > t).map(x => state.ratings[x].r);
+  return lower.length ? Math.max(...lower) + TIER_BAND_GAP : -Infinity;
+}
+
+/* idsで指定した画像たちを、現在の並び（ranking）における外側のすぐ外側の画像との間に、
+   内部の相対順序を保ったまま収まるようレートを一括で詰め直す。ロック解除や、Tierを未定に
+   戻すとき（1枚でもまとめてでも）など、順位を変えずに見た目の位置だけ保ちたいときに使う */
+function rebasePositionalGroup(ids, ranking) {
+  if (!ids.length) return;
+  const order = ranking.order;
+  const idSet = new Set(ids);
+  const sortedIds = ids.slice().sort((a, b) => ranking.rank[a] - ranking.rank[b]); // 現在の並び順（上から下）
+  const start = ranking.rank[sortedIds[0]], end = ranking.rank[sortedIds[sortedIds.length - 1]];
+  const topId = sortedIds[0], bottomId = sortedIds[sortedIds.length - 1];
+
+  let aboveId = null;
+  for (let i = start - 1; i >= 0; i--) {
+    const cand = order[i];
+    if (idSet.has(cand) || isLocked(cand) || !tierCompatible(topId, cand)) continue;
+    aboveId = cand; break;
+  }
+  let belowId = null;
+  for (let i = end + 1; i < order.length; i++) {
+    const cand = order[i];
+    if (idSet.has(cand) || isLocked(cand) || !tierCompatible(bottomId, cand)) continue;
+    belowId = cand; break;
+  }
+
+  const ceiling = aboveId ? state.ratings[aboveId].r : Infinity;
+  const floor = belowId ? state.ratings[belowId].r : -Infinity;
+  const n = sortedIds.length;
+  if (ceiling === Infinity && floor === -Infinity) return; // 外側に基準が無ければ動かさなくてよい
+
+  if (ceiling === Infinity) {
+    sortedIds.forEach((sid, i) => { state.ratings[sid].r = floor + DRAG_RATE_GAP * (n - i); });
+  } else if (floor === -Infinity) {
+    sortedIds.forEach((sid, i) => { state.ratings[sid].r = ceiling - DRAG_RATE_GAP * (i + 1); });
+  } else {
+    const span = ceiling - floor;
+    sortedIds.forEach((sid, i) => { state.ratings[sid].r = floor + span * (n - i) / (n + 1); });
+  }
 }
 // 片方が未定、または同じTierなら比較できる。Tierが違えば比較できない
 const tierCompatible = (a, b) => {
@@ -925,6 +963,9 @@ function compactTiers() {
 
 function setTier(id, tier) {
   if (!state.ratings[id]) return;
+  if (tier === null && state.ratings[id].tier !== null) {
+    rebasePositionalGroup([id], makeRanking()); // 未定に戻しても順位が動かないよう、位置を保ったままレートを決め直す
+  }
   state.ratings[id].tier = tier;
   if (tier !== null) {
     state.tierMax = Math.max(state.tierMax, tier);
@@ -950,6 +991,20 @@ function insertTier(pos) {
   render();
 }
 
+/* 全員のTierをまとめて未定に戻す。レートや比較記録、ロックには触れず、
+   Tierを持っていた画像は位置を保ったままレートを決め直す */
+function resetAllTiers() {
+  const ranking = makeRanking();
+  const withTier = allIds().filter(id => getTier(id) !== null);
+  if (!withTier.length) return;
+  rebasePositionalGroup(withTier, ranking);
+  for (const id of withTier) state.ratings[id].tier = null;
+  state.tierMax = TIER_MAX_DEFAULT;
+  if (pair && !tierCompatible(pair[0], pair[1])) pair = null;
+  saveState();
+  render();
+}
+
 /* まとめてロック・解除。TierとLockは独立の仕組みで、ロックはTierをまたいでよい。
    ロック中の画像は二択・自動出題・手動の順位入れ替えの対象から外れる */
 function toggleLock(id) {
@@ -968,6 +1023,7 @@ function toggleLock(id) {
   } else if (order.every(isLocked)) {
     // 全画像ロック中の特殊ケース：押した位置から近いほうの端までを解除（同数なら下側優先）
     const range = distTop < distBottom ? order.slice(0, pos + 1) : order.slice(pos, n);
+    rebasePositionalGroup(range, ranking); // 解除しても順位が動かないよう、外側との位置関係を保ったまま詰め直す
     range.forEach(rid => { state.ratings[rid].locked = false; state.ratings[rid].lockZone = null; });
   } else {
     // 通常：ロックされた塊のうち、未ロック範囲に接する内側の端から押した位置までを解除
@@ -976,7 +1032,9 @@ function toggleLock(id) {
     while (end < n - 1 && isLocked(order[end + 1])) end++;
     const innerEdge = start === 0 ? end : start;
     const from = Math.min(innerEdge, pos), to = Math.max(innerEdge, pos);
-    for (let i = from; i <= to; i++) { state.ratings[order[i]].locked = false; state.ratings[order[i]].lockZone = null; }
+    const range = order.slice(from, to + 1);
+    rebasePositionalGroup(range, ranking); // 解除しても順位が動かないよう、外側との位置関係を保ったまま詰め直す
+    for (const rid of range) { state.ratings[rid].locked = false; state.ratings[rid].lockZone = null; }
   }
 
   if (pair && (isLocked(pair[0]) || isLocked(pair[1]))) pair = null;
@@ -1642,36 +1700,27 @@ function drawCover(ctx, img, x, y, w, h) {
 
 const SHEET_TITLE_H = 64; // タイトルを入れたときの帯の高さ(px)
 
-/* Tierごとの範囲（先頭の順位〜末尾の順位）を求め、その範囲に入る未定の画像もそのTierとして扱う。
-   どのTierの範囲にも入らない未定の画像は「未定」としてまとめ、黒いラベルで出す。
-   Tier1, Tier2, …, 未定 の順にグループ分けし、各グループを10枚ごとの行に区切る */
-/* 現在の順位を、あるTierの最上位〜最下位に挟まれた未定はそのTierとして扱う形でグループ分けする。
+/* 現在の順位を、各Tierの最上位（最初に出てくる順位）だけを基準にグループ分けする。
+   一番手前のTierより上の未定はそのTierとして、Tier同士の間の未定は手前のTierとして、
+   一番後ろのTierより下の未定はそのTierとして扱う。Tierが1つも無ければ空の配列を返す。
    Tierシートの行分けと、Tierごとの内訳表示の両方から使う */
 function tierGroups(order) {
-  const ranges = {}; // tier番号 -> {min, max}（order内のインデックス）
+  const tops = {}; // tier番号 -> 最初に出てくる順位（インデックス）
   order.forEach((id, i) => {
     const t = getTier(id);
-    if (t === null) return;
-    if (!ranges[t]) ranges[t] = { min: i, max: i };
-    else { ranges[t].min = Math.min(ranges[t].min, i); ranges[t].max = Math.max(ranges[t].max, i); }
+    if (t === null || t in tops) return;
+    tops[t] = i;
   });
-  const tiers = Object.keys(ranges).map(Number).sort((a, b) => a - b);
-
-  // TierNの最下位からTier(N+1)の最上位までの間（他のTierを挟まない場合）に挟まった未定は、手前のTierNとして数える
-  for (let k = 0; k < tiers.length - 1; k++) {
-    ranges[tiers[k]].max = Math.max(ranges[tiers[k]].max, ranges[tiers[k + 1]].min - 1);
-  }
-
-  const covered = new Set();
-  for (const t of tiers) { const { min, max } = ranges[t]; for (let i = min; i <= max; i++) covered.add(i); }
+  const tiers = Object.keys(tops).map(Number).sort((a, b) => a - b);
+  if (!tiers.length) return [];
 
   const groups = [];
-  for (const t of tiers) {
-    const { min, max } = ranges[t];
-    groups.push({ tier: t, ids: order.slice(min, max + 1) });
+  for (let k = 0; k < tiers.length; k++) {
+    const t = tiers[k];
+    const start = k === 0 ? 0 : tops[t]; // 一番手前のTierだけ、リストの先頭まで範囲を広げる
+    const end = k === tiers.length - 1 ? order.length - 1 : tops[tiers[k + 1]] - 1; // 一番後ろのTierだけ、末尾まで広げる
+    groups.push({ tier: t, ids: order.slice(start, end + 1) });
   }
-  const undecided = order.filter((id, i) => !covered.has(i));
-  if (undecided.length) groups.push({ tier: null, ids: undecided });
   return groups;
 }
 
@@ -2192,7 +2241,6 @@ function renderArena(ranking) {
 
     // 一度も比較していない画像だけ、その場で消せる削除ボタンを出す
     deleteBtn.hidden = item.n > 0;
-    deleteBtn.onclick = () => deleteImage(id);
   }
   $("powerBtn").textContent = showPower ? "強さを隠す" : "強さを表示";
 }
@@ -2353,6 +2401,9 @@ $("importInput").addEventListener("change", e => {
 
 confirmTwice($("resetBtn"), "もう一度押すと削除", deleteAll);
 confirmTwice($("resetAllRatingsBtn"), "もう一度押すと全初期化", resetAllRatings);
+confirmTwice($("resetAllTiersBtn"), "もう一度押すとTierを初期化", resetAllTiers);
+confirmTwice($("leftDeleteBtn"), "もう一度押すと削除", () => deleteImage(pair[0]));
+confirmTwice($("rightDeleteBtn"), "もう一度押すと削除", () => deleteImage(pair[1]));
 
 
 $("leftCard").addEventListener("click",  () => answer(RESULT.LEFT));
