@@ -963,9 +963,6 @@ function compactTiers() {
 
 function setTier(id, tier) {
   if (!state.ratings[id]) return;
-  if (tier === null && state.ratings[id].tier !== null) {
-    rebasePositionalGroup([id], makeRanking()); // 未定に戻しても順位が動かないよう、位置を保ったままレートを決め直す
-  }
   state.ratings[id].tier = tier;
   if (tier !== null) {
     state.tierMax = Math.max(state.tierMax, tier);
@@ -994,10 +991,8 @@ function insertTier(pos) {
 /* 全員のTierをまとめて未定に戻す。レートや比較記録、ロックには触れず、
    Tierを持っていた画像は位置を保ったままレートを決め直す */
 function resetAllTiers() {
-  const ranking = makeRanking();
   const withTier = allIds().filter(id => getTier(id) !== null);
   if (!withTier.length) return;
-  rebasePositionalGroup(withTier, ranking);
   for (const id of withTier) state.ratings[id].tier = null;
   state.tierMax = TIER_MAX_DEFAULT;
   if (pair && !tierCompatible(pair[0], pair[1])) pair = null;
