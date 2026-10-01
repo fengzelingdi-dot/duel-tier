@@ -1636,6 +1636,8 @@ async function importData(file) {
   state.hashes = state.hashes || {};
   applyImageAspectCSS();
   cleanUpState();
+  // 古いファイルはレートとTierの整合性が保証されていないので、読み込み直後に全員補正する
+  for (const id of allIds()) clampToTierBand(id);
   $("titleInput").value = state.title;
   document.title = state.title.trim() ? `${state.title.trim()}ランキング` : "二択式ランキングメーカー";
   pair = null;
