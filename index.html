@@ -963,6 +963,12 @@ function compactTiers() {
 
 function setTier(id, tier) {
   if (!state.ratings[id]) return;
+  if (tier === null && state.ratings[id].tier !== null) {
+    // 未定に戻す前に、今の並び順を正としてレートを上書きし、Tier外れ後も順位が変わらないようにする
+    const order = makeRanking().order;
+    const n = order.length;
+    order.forEach((xid, i) => { state.ratings[xid].r = RATING_START + (n / 2 - i) * DRAG_RATE_GAP; });
+  }
   state.ratings[id].tier = tier;
   if (tier !== null) {
     state.tierMax = Math.max(state.tierMax, tier);
@@ -993,7 +999,11 @@ function insertTier(pos) {
 function resetAllTiers() {
   const withTier = allIds().filter(id => getTier(id) !== null);
   if (!withTier.length) return;
-  for (const id of withTier) state.ratings[id].tier = null;
+  // Tier全初期化後も順位が変わらないよう、今の並び順（Tier込み）を正としてレートを上書きする
+  const order = makeRanking().order;
+  const n = order.length;
+  order.forEach((id, i) => { state.ratings[id].r = RATING_START + (n / 2 - i) * DRAG_RATE_GAP; });
+  for (const id of allIds()) state.ratings[id].tier = null;
   state.tierMax = TIER_MAX_DEFAULT;
   if (pair && !tierCompatible(pair[0], pair[1])) pair = null;
   saveState();
