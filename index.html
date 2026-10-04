@@ -969,7 +969,6 @@ const RD_START       = 350;   // 新しい画像の信頼幅（最大値）
 const RD_MIN         = 50;    // 信頼幅の下限
 const RD_GROWTH      = 25;    // 比較されない間に信頼幅が広がる速さ
 const RATING_JITTER  = 0.01;  // 複数の画像に同時に同じレートを与えるとき、手動での並べ替えができるように見分けをつける程度のばらつき
-const jitteredRating = base => base + (Math.random() - 0.5) * RATING_JITTER;
 const PLACEMENT_N    = 4;     // 新しい画像の配置比較の回数（表示や強さの公開はここまで）
 const PLACEMENT_WIDE_N = 7;   // 幅広い相手と当てる期間（表示には出さず、内部の挙動だけ長く続ける）
 const HISTORY_MAX    = 300;   // Undo で戻れる回数
@@ -985,17 +984,29 @@ const TOAST_FADE_MS     = 250;    // 大きなお知らせが消えていく時�
 const CONFIRM_MS        = 3000;   // 2回押しの確認の吹き出しが消えるまで
 const IMPORT_CONFIRM_MS = 4000;   // 読み込みの上書き確認だけは少し長めに出す
 const DOWNLOAD_URL_MS   = 10000;  // 保存用に作った一時的なURLを片付けるまで
+const SAVE_VERSION      = 3;      // 保存データの形式の版。形式を変えたら上げる
+// 出題で相手を選ぶときの、予想勝率の範囲
+const WIDE_WIN_LOW      = 0.2;    // 配置比較の間は、幅広い相手（勝率20〜80%）と当てる
+const WIDE_WIN_HIGH     = 0.8;
+const NORMAL_WIN_LOW    = 0.3;    // 通常は、実力の近い相手（勝率30〜70%）と当てる
+const NORMAL_WIN_HIGH   = 0.7;
+const NEAR_OPPONENTS    = 3;      // 範囲に合う相手がいないとき、レートの近い順に候補にする枚数
+// 吹き出し（Tierメニューなど）の位置
+const MENU_GAP          = 4;      // 押したボタンとの隙間(px)
+const MENU_MARGIN       = 8;      // 画面の端から離す幅(px)
+// Tierの虹色。Tier1を色相0（赤）とし、最後のTierが色相 TIER_HUE_RANGE になるよう均等に割り当てる
+const TIER_HUE_RANGE    = 270;
+const TIER_SATURATION   = 70;     // 彩度(%)
+const TIER_LIGHTNESS    = 42;     // 明るさ(%)
+const TIER_NAME_MAX     = 20;     // シート作成時に付けるTier名の最大文字数
+const JPEG_QUALITY      = 0.88;   // 縮小して保存する画像の画質
+// 旧版データの移行
+const MIGRATE_ITERATIONS = 300;   // 強さを推定する計算の繰り返し回数
+const MIGRATE_RD         = 200;   // 移行した画像の信頼幅
 // 保存する画像の縦横比（幅 / 高さ）。ラベルは「縦:横」の言い方に合わせている
 const RESIZE_RATIOS  = { "4:3": 3 / 4, "1:1": 1, "3:4": 4 / 3 };
 const RESIZE_DEFAULT = "4:3";
 const IMAGE_HEIGHT   = 640;   // 保存する画像の高さ(px)。幅はここで選んだ比率から決まる
-const currentAspect  = () => RESIZE_RATIOS[state.resizeRatio] || RESIZE_RATIOS[RESIZE_DEFAULT];
-
-/* 比較画面・一覧の画像の枠を、今選ばれているリサイズ比率に合わせる */
-function applyImageAspectCSS() {
-  document.documentElement.style.setProperty("--img-aspect", currentAspect());
-}
-const Q = Math.LN10 / 400;    // Glicko の定数
 const SAMPLE_DIR     = "samples/";  // サンプル画像のフォルダ。中の samples.json に一覧を書く
 
 /* ==================================================================
@@ -1008,11 +1019,15 @@ const SAMPLE_DIR     = "samples/";  // サンプル画像のフォルダ。中�
    names[id]  : 画像の名前（元のファイル名）
    hashes[id] : 画像の中身のハッシュ（同じ画像の重複追加を見分ける）
    t       : これまでの比較の総数（時間の代わりに使う）
-   hist    : Undo 用の履歴 { a, b, res, before }（手動の入れ替えは type: "swap"）
+   hist    : Undo 用の履歴 { a, b, res, before }。type: "swap" は手動の入れ替えとドラッグ
+             （ドラッグは1枚だけ動かすので、a と b が同じ画像になる）
    tierMax : 今用意しているTierの箱の数（5〜20）
    title / resizeRatio : タイトル欄の文字と、新しく追加する画像の縦横比
    ================================================================== */
-const emptyState = () => ({ version: 3, names: {}, ratings: {}, hashes: {}, t: 0, hist: [], title: "", resizeRatio: RESIZE_DEFAULT, tierMax: TIER_MAX_DEFAULT });
+const emptyState = () => ({ version: SAVE_VERSION, names: {}, ratings: {}, hashes: {}, t: 0, hist: [], title: "", resizeRatio: RESIZE_DEFAULT, tierMax: TIER_MAX_DEFAULT });
+
+// 同じレートが並ばないよう、ごく小さなばらつきを足す
+const jitteredRating = base => base + (Math.random() - 0.5) * RATING_JITTER;
 
 /* 画像1枚分のレートの記録を作る。r は元になるレートで、同じ値が並ばないよう少しだけばらつかせる。
    指定しなかった項目は、新しく追加した画像と同じ値になる */
@@ -1036,6 +1051,14 @@ const pairKey = (a, b) => (a < b ? a + "|" + b : b + "|" + a);
 const newId = () => "i" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const mean = list => (list.length ? list.reduce((s, x) => s + x, 0) / list.length : RATING_START);
 
+/* 色は、CSSの :root に書いたカラーパレット（--white や --ash-500 など）から名前で読む。
+   canvas に描くシート画像の色も、ここを通して同じパレットから指定する */
+const pal = name => getComputedStyle(document.documentElement).getPropertyValue(`--${name}`).trim();
+const palAlpha = (name, alpha) => {
+  const n = parseInt(pal(name).replace("#", ""), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+};
+
 /* ==================================================================
    Tier
    各画像に付ける1以上の番号（未定は null）。番号が小さいほど上位で、
@@ -1052,12 +1075,12 @@ const tierCompatible = (a, b) => {
   return ta === null || tb === null || ta === tb;
 };
 // Tier表シートの行の色と同じ虹の配色。tierNum は1始まり、maxT は今の最大Tier
-const tierColor = (tierNum, maxT) => `hsl(${maxT > 1 ? ((tierNum - 1) / (maxT - 1)) * 270 : 0}, 70%, 42%)`;
+const tierColor = (tierNum, maxT) => `hsl(${maxT > 1 ? ((tierNum - 1) / (maxT - 1)) * TIER_HUE_RANGE : 0}, ${TIER_SATURATION}%, ${TIER_LIGHTNESS}%)`;
 
 /* Tierの数字の欠番を、実際に使われている番号だけを取り出して1から詰め直す。
    自動では呼ばれず、「Tierを詰める」ボタンとシート作成時の警告からのみ呼ばれる */
 function compactTiers() {
-  if (anyLocked()) return;
+  if (!canEditTierBoxes()) return;
   const used = [...new Set(allIds().map(id => state.ratings[id].tier).filter(t => t !== null))].sort((a, b) => a - b);
   const remap = {};
   used.forEach((old, i) => { remap[old] = i + 1; });
@@ -1072,7 +1095,7 @@ function compactTiers() {
    ロックしていない画像は、上端にロックした画像のTierより上位にも、下端にロックした画像のTierより
    下位にもできない。これを許すと、ロックを解除したときにTierの決まりで順位が動いてしまうため */
 function allowedTierRange(id) {
-  if (isLocked(id)) return null;
+  if (!canEdit(id)) return null;
   let min = 1, max = Infinity;
   for (const x of allIds()) {
     const t = getTier(x);
@@ -1094,6 +1117,11 @@ function setTier(id, tier) {
     state.tierMax = Math.max(state.tierMax, tier);
     placeIntoTier(id, orderBefore);
   }
+  finishTierChange();
+}
+
+/* Tierを変えたあとの後片付け。比較中の2枚がTierの違いで比べられなくなっていれば選び直し、保存して描画する */
+function finishTierChange() {
   if (pair && !tierCompatible(pair[0], pair[1])) pair = null;
   saveState();
   render();
@@ -1126,37 +1154,38 @@ function placeIntoTier(id, orderBefore) {
    0なら最上位（Tier1の上）に、tierMaxならTier tierMax の下に新しい空の箱ができる。
    pos より大きいTierはすべて1つ繰り上がる */
 function insertTier(pos) {
-  if (state.tierMax >= TIER_MAX_CAP || anyLocked()) return;
+  if (state.tierMax >= TIER_MAX_CAP || !canEditTierBoxes()) return;
   for (const id of allIds()) {
     const t = state.ratings[id].tier;
     if (t !== null && t > pos) state.ratings[id].tier = t + 1;
   }
   state.tierMax += 1;
-  if (pair && !tierCompatible(pair[0], pair[1])) pair = null;
-  saveState();
-  render();
+  finishTierChange();
 }
 
 /* 全員のTierをまとめて未定に戻す。レート・比較記録・ロックには触れない。
    レートはいつも順位どおりに並べてあるので、Tierを外しても順位は変わらない */
 function resetAllTiers() {
-  if (anyLocked()) return;
+  if (!canEditTierBoxes()) return;
   const withTier = allIds().filter(id => getTier(id) !== null);
   if (!withTier.length) return;
   for (const id of allIds()) state.ratings[id].tier = null;
   state.tierMax = TIER_MAX_DEFAULT;
-  if (pair && !tierCompatible(pair[0], pair[1])) pair = null;
-  saveState();
-  render();
+  finishTierChange();
 }
 
 /* ==================================================================
    ロック
    順位の端からまとめて固定する仕組み。Tierとは独立していて、Tierをまたいでよい。
-   ロック中の画像は出題にも順位の入れ替えにも使わず、並び替えでは何よりも先に端へ置く
+   ・ロック中の画像は、ロック解除以外の操作（Tier変更・削除・移動・取り消し）をすべて受け付けない
+   ・ロック中の画像のレートは動かさない。並び替えでは何よりも先に端へ置く
+   ・ロックが1つでもあると、Tier追加・Tierを詰める・Tier初期化はできない
    ================================================================== */
 const isLocked = id => !!(state.ratings[id] && state.ratings[id].locked);
-const anyLocked = () => allIds().some(isLocked); // 1つでもロックがあると、Tier追加・詰める・Tier初期化はできない
+const anyLocked = () => allIds().some(isLocked);
+// 操作を受け付けるかの判定。ロックを理由に操作を止める箇所は、すべてこの2つを使う
+const canEdit = id => !isLocked(id);              // この画像を操作できるか（ロック中は解除しかできない）
+const canEditTierBoxes = () => !anyLocked();      // Tier追加・Tierを詰める・Tier初期化ができるか
 // ロック中の画像がどちらの端に固定されているか。並び替えで最優先の判定に使う
 const lockRank = id => {
   if (!isLocked(id)) return 0;
@@ -1208,7 +1237,7 @@ function toggleLock(id) {
    ・Tierを未定に戻しても、ロックを解除しても、順位は動かない
    ================================================================== */
 
-/* ロックとTierの決まりを守った並び順を、今のレートから作る。
+/* 並び順だけ（idの配列）を返す。ロックとTierの決まりを守った並び順を、今のレートから作る。
    レートが決まりと食い違っていても（古いデータなど）、必ず1通りに決まる */
 function canonicalOrder() {
   const byRating = allIds().sort((a, b) => (state.ratings[b].r - state.ratings[a].r) || (a < b ? -1 : a > b ? 1 : 0));
@@ -1301,18 +1330,6 @@ const saveState = () => {
   return db("kv", "readwrite", s => s.put(JSON.parse(JSON.stringify(state)), "state"));
 };
 
-/* 色は、CSSの :root に書いたカラーパレット（--white や --ash-500 など）から名前で読む。
-   canvas に描くシート画像の色も、ここを通して同じパレットから指定する */
-const pal = name => getComputedStyle(document.documentElement).getPropertyValue(`--${name}`).trim();
-const palAlpha = (name, alpha) => {
-  const n = parseInt(pal(name).replace("#", ""), 16);
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
-};
-
-/* 画像を IMAGE_ASPECT の縦横比に中央でトリミングしてから、
-   幅・高さとも一定のサイズに縮小して JPEG にする。
-   すべての画像がここで同じ縦横比・同じ寸法になるので、
-   一覧やTier表シートでの見え方が画像ごとにばらつかない */
 /* 同じ画像を誤って重複して追加していないか調べるためのハッシュ */
 async function hashBlob(blob) {
   const buf = await blob.arrayBuffer();
@@ -1320,6 +1337,18 @@ async function hashBlob(blob) {
   return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
+// 今選ばれているリサイズの縦横比（幅 / 高さ）
+const currentAspect = () => RESIZE_RATIOS[state.resizeRatio] || RESIZE_RATIOS[RESIZE_DEFAULT];
+
+/* 比較画面・一覧の画像の枠を、今選ばれているリサイズ比率に合わせる */
+function applyImageAspectCSS() {
+  document.documentElement.style.setProperty("--img-aspect", currentAspect());
+}
+
+/* 画像を今選ばれているリサイズの縦横比（currentAspect）に中央でトリミングしてから、
+   高さ IMAGE_HEIGHT に縮小して JPEG にする。
+   すべての画像がここで同じ縦横比・同じ寸法になるので、
+   一覧やTier表シートでの見え方が画像ごとにばらつかない */
 async function shrinkImage(file) {
   try {
     const bitmap = await createImageBitmap(file);
@@ -1343,7 +1372,7 @@ async function shrinkImage(file) {
     ctx.fillStyle = pal("white");
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-    return await new Promise(r => canvas.toBlob(b => r(b || file), "image/jpeg", 0.88));
+    return await new Promise(r => canvas.toBlob(b => r(b || file), "image/jpeg", JPEG_QUALITY));
   } catch (e) {
     return file;
   }
@@ -1351,7 +1380,10 @@ async function shrinkImage(file) {
 
 /* ==================================================================
    レート計算（Glicko 方式）
+   式の中の 400 と 10 は「レートの差が400で、勝つ見込みが10倍」というレートの物差し、
+   3 は Glicko の式の定数
    ================================================================== */
+const Q = Math.LN10 / 400;    // Glicko の定数
 
 /* しばらく比較されていない画像は信頼幅が広がる。
    1期間 = 各画像が平均して1回比較されるまでの比較数 */
@@ -1417,7 +1449,7 @@ function findOpponents(a, low, high, exclude = []) {
   if (inRange.length) return inRange;
   return others
     .sort((x, y) => Math.abs(state.ratings[x].r - A.r) - Math.abs(state.ratings[y].r - A.r))
-    .slice(0, 3);
+    .slice(0, NEAR_OPPONENTS);
 }
 
 const shuffleSides = ([a, b]) => (Math.random() < 0.5 ? [a, b] : [b, a]);
@@ -1429,8 +1461,8 @@ function pickWaitingPair(counterKey, ids) {
   const waiting = ids.filter(id => state.ratings[id][counterKey] > 0);
   if (!waiting.length || waiting.length >= ids.length) return null;
   const a = pickRandom(waiting);
-  const settled = findOpponents(a, 0.2, 0.8).filter(b => state.ratings[b][counterKey] === 0);
-  const b = settled.length ? pickRandom(settled) : pickRandom(findOpponents(a, 0.2, 0.8));
+  const settled = findOpponents(a, WIDE_WIN_LOW, WIDE_WIN_HIGH).filter(b => state.ratings[b][counterKey] === 0);
+  const b = settled.length ? pickRandom(settled) : pickRandom(findOpponents(a, WIDE_WIN_LOW, WIDE_WIN_HIGH));
   return shuffleSides([a, b]);
 }
 
@@ -1455,13 +1487,19 @@ function pickPair() {
     u -= weights[i];
     if (u <= 0) { a = ids[i]; break; }
   }
-  return shuffleSides([a, pickRandom(findOpponents(a, 0.3, 0.7))]);
+  return shuffleSides([a, pickRandom(findOpponents(a, NORMAL_WIN_LOW, NORMAL_WIN_HIGH))]);
 }
 
 /* ==================================================================
    操作
    ================================================================== */
 const RESULT = { LEFT: 0, RIGHT: 1, TIE: 2 };
+
+/* Undo 用の履歴に1件足す。HISTORY_MAX 件を超えたら古いものから捨てる */
+function pushHistory(entry) {
+  state.hist.push(entry);
+  if (state.hist.length > HISTORY_MAX) state.hist.shift();
+}
 
 function answer(result) {
   if (!pair) return;
@@ -1476,8 +1514,7 @@ function answer(result) {
   const before = { [left]: { ...state.ratings[left] }, [right]: { ...state.ratings[right] } };
   const scoreLeft = result === RESULT.LEFT ? 1 : result === RESULT.RIGHT ? 0 : 0.5;
   applyResult(left, right, scoreLeft);
-  state.hist.push({ a: left, b: right, res: result, before });
-  if (state.hist.length > HISTORY_MAX) state.hist.shift();
+  pushHistory({ a: left, b: right, res: result, before });
 
   // 配置比較が必要な画像がこの回答でちょうど無くなったか（1枚ごとではなく全体で）
   const placingAfter = allIds().filter(id => state.ratings[id].p > 0).length;
@@ -1498,15 +1535,14 @@ function moveRank(id, dir) {
   const targetPos = pos + dir;
   if (targetPos < 0 || targetPos >= ranking.order.length) return;
   const otherId = ranking.order[targetPos];
-  if (!tierCompatible(id, otherId) || isLocked(id) || isLocked(otherId)) return;
+  if (!tierCompatible(id, otherId) || !canEdit(id) || !canEdit(otherId)) return;
 
   const before = { [id]: { ...state.ratings[id] }, [otherId]: { ...state.ratings[otherId] } };
   const swapR = state.ratings[id].r;
   state.ratings[id].r = state.ratings[otherId].r;
   state.ratings[otherId].r = swapR;
 
-  state.hist.push({ type: "swap", a: id, b: otherId, before });
-  if (state.hist.length > HISTORY_MAX) state.hist.shift();
+  pushHistory({ type: "swap", a: id, b: otherId, before });
   saveState();
   render(true);
 }
@@ -1531,7 +1567,7 @@ function computeDragBand(id, order) {
 }
 
 function startDrag(id, li) {
-  if (isLocked(id)) return false;
+  if (!canEdit(id)) return false;
   const order = makeRanking().order;
   dragId = id;
   dragBand = computeDragBand(id, order);
@@ -1570,8 +1606,7 @@ function applyDragPosition(id, aboveId, belowId) {
 
   const before = { [id]: { ...item } };
   item.r = newR;
-  state.hist.push({ type: "swap", a: id, b: id, before });
-  if (state.hist.length > HISTORY_MAX) state.hist.shift();
+  pushHistory({ type: "swap", a: id, b: id, before }); // ドラッグも "swap" として記録する（a と b が同じ画像）
   saveState();
 }
 
@@ -1602,7 +1637,7 @@ function cancelDrag() {
 function undo() {
   const entry = state.hist[state.hist.length - 1];
   if (!entry) return;
-  if (Object.keys(entry.before).some(isLocked)) {
+  if (Object.keys(entry.before).some(id => !canEdit(id))) {
     showMessage("ロック中の画像が含まれるため、取り消せません");
     return;
   }
@@ -1680,7 +1715,7 @@ async function addImages(files) {
 }
 
 function deleteImage(id) {
-  if (isLocked(id)) return; // ロック中の画像は、解除するまで削除できない
+  if (!canEdit(id)) return;
   delete state.ratings[id];
   delete state.names[id];
   delete state.hashes[id];
@@ -1838,7 +1873,7 @@ async function importData(file) {
     showMessage("ファイルを読み込めませんでした");
     return;
   }
-  const valid = data && data.app === "pairsort" && data.state && data.state.version === 3 && data.images;
+  const valid = data && data.app === "pairsort" && data.state && data.state.version === SAVE_VERSION && data.images;
   if (!valid) { showMessage("このツールの保存ファイルではありません"); return; }
 
   Object.values(urls).forEach(u => URL.revokeObjectURL(u));
@@ -1931,6 +1966,14 @@ function drawCover(ctx, img, x, y, w, h) {
 }
 
 const SHEET_TITLE_H = 64; // タイトルを入れたときの帯の高さ(px)
+const SHEET_TITLE_PAD = 20; // タイトル文字の左の余白(px)
+const SHEET_FONT = "'Zen Kaku Gothic New', sans-serif";
+const SHEET_TITLE_SIZE = 32;  // 文字の大きさ(px)：タイトル
+const SHEET_LABEL_SIZE = 26;  //                  ：行の見出し
+const SHEET_RANK_SIZE  = 13;  //                  ：画像の左上の順位番号
+const SHEET_RANK_BOX_W = 30, SHEET_RANK_BOX_H = 22; // 順位番号の下に敷く黒い四角の大きさ(px)
+const SHEET_RANK_BOX_ALPHA = 0.65;                  // その黒の濃さ
+const SHEET_RANK_TEXT_X = 6, SHEET_RANK_TEXT_Y = 16; // 四角の左上から見た、番号の書き出し位置(px)
 
 /* 現在の順位を、各Tierの最上位（最初に出てくる順位）だけを基準にグループ分けする。
    一番手前のTierより上の未定はそのTierとして、Tier同士の間の未定は手前のTierとして、
@@ -2010,10 +2053,10 @@ async function buildSheet(rows, ranking, title) {
 /* シートの一番上のタイトル */
 function drawSheetTitle(ctx, title, titleH) {
   ctx.fillStyle = pal("white");
-  ctx.font = "bold 32px 'Zen Kaku Gothic New', sans-serif";
+  ctx.font = `bold ${SHEET_TITLE_SIZE}px ${SHEET_FONT}`;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  ctx.fillText(title, 20, titleH / 2);
+  ctx.fillText(title, SHEET_TITLE_PAD, titleH / 2);
   ctx.textBaseline = "alphabetic";
 }
 
@@ -2029,7 +2072,7 @@ function drawSheetLabels(ctx, rows, { cellH, rowCount, titleH }) {
     ctx.fillStyle = color;
     ctx.fillRect(0, y, SHEET_LABEL_W, h);
     ctx.fillStyle = pal("white");
-    ctx.font = "bold 26px 'Zen Kaku Gothic New', sans-serif";
+    ctx.font = `bold ${SHEET_LABEL_SIZE}px ${SHEET_FONT}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(label, SHEET_LABEL_W / 2, y + h / 2);
@@ -2058,11 +2101,11 @@ async function drawSheetImages(ctx, rows, ranking, { cellH, rowCount, titleH }) 
       }
 
       // 画像の左上に小さく順位番号（全体の中での順位）
-      ctx.fillStyle = palAlpha("black", 0.65);
-      ctx.fillRect(x, y, 30, 22);
+      ctx.fillStyle = palAlpha("black", SHEET_RANK_BOX_ALPHA);
+      ctx.fillRect(x, y, SHEET_RANK_BOX_W, SHEET_RANK_BOX_H);
       ctx.fillStyle = pal("white");
-      ctx.font = "bold 13px 'Zen Kaku Gothic New', sans-serif";
-      ctx.fillText(String(ranking.rank[id] + 1), x + 6, y + 16);
+      ctx.font = `bold ${SHEET_RANK_SIZE}px ${SHEET_FONT}`;
+      ctx.fillText(String(ranking.rank[id] + 1), x + SHEET_RANK_TEXT_X, y + SHEET_RANK_TEXT_Y);
     }
   }
 }
@@ -2117,7 +2160,7 @@ function hasTierGap() {
 /* 「シート作成」の入口。Tierに抜けがあれば先に詰めるかどうかを確認し、
    Tierが1つもなければ、名前を聞かずそのまま作る */
 function exportSheets() {
-  if (hasTierGap() && anyLocked()) {
+  if (hasTierGap() && !canEditTierBoxes()) {
     showMessage("Tierの番号を詰める必要がありますが、ロック中は詰められません。ロックを解除してから作成してください");
     return;
   }
@@ -2151,7 +2194,7 @@ function openTierNameForm() {
     input.type = "text";
     input.id = `tierNameInput${t}`;
     input.placeholder = `Tier ${t}`;
-    input.maxLength = 20;
+    input.maxLength = TIER_NAME_MAX;
     row.append(label, input);
     box.append(row);
   }
@@ -2309,6 +2352,16 @@ document.addEventListener("click", e => {
   if (!$("resizePicker").contains(e.target)) $("resizeMenu").hidden = true;
 });
 
+/* 吹き出し menu を、押したボタン anchorEl のすぐ下に出す。画面からはみ出すときは内側へ寄せる */
+function placeMenuBelow(menu, anchorEl) {
+  menu.hidden = false;
+  const rect = anchorEl.getBoundingClientRect();
+  const top = Math.min(rect.bottom + MENU_GAP, window.innerHeight - menu.offsetHeight - MENU_MARGIN);
+  const left = Math.min(rect.left, window.innerWidth - menu.offsetWidth - MENU_MARGIN);
+  menu.style.top = `${Math.max(MENU_MARGIN, top)}px`;
+  menu.style.left = `${Math.max(MENU_MARGIN, left)}px`;
+}
+
 /* Tierを選ぶ吹き出し。クリックされたリボン/ボタンのすぐ下に出す */
 function openTierMenu(id, anchorEl) {
   const ceiling = tierCeiling();
@@ -2324,13 +2377,7 @@ function openTierMenu(id, anchorEl) {
     box.append(b);
   });
 
-  const menu = $("tierMenu");
-  menu.hidden = false;
-  const rect = anchorEl.getBoundingClientRect();
-  const top = Math.min(rect.bottom + 4, window.innerHeight - menu.offsetHeight - 8);
-  const left = Math.min(rect.left, window.innerWidth - menu.offsetWidth - 8);
-  menu.style.top = `${Math.max(8, top)}px`;
-  menu.style.left = `${Math.max(8, left)}px`;
+  placeMenuBelow($("tierMenu"), anchorEl);
 }
 document.addEventListener("click", e => {
   if (!$("tierMenu").contains(e.target) && !e.target.classList.contains("tier-ribbon")) {
@@ -2355,13 +2402,7 @@ function openTierAddMenu(anchorEl) {
     box.append(b);
   }
 
-  const menu = $("tierAddMenu");
-  menu.hidden = false;
-  const rect = anchorEl.getBoundingClientRect();
-  const top = Math.min(rect.bottom + 4, window.innerHeight - menu.offsetHeight - 8);
-  const left = Math.min(rect.left, window.innerWidth - menu.offsetWidth - 8);
-  menu.style.top = `${Math.max(8, top)}px`;
-  menu.style.left = `${Math.max(8, left)}px`;
+  placeMenuBelow($("tierAddMenu"), anchorEl);
 }
 $("tierAddBtn").addEventListener("click", () => {
   if ($("tierAddBtn").disabled) return;
@@ -2419,8 +2460,8 @@ function showToast(text) {
   }, TOAST_MS);
 }
 
-/* 今の順位。並び方の決まり（ロック → Tier → レート）は canonicalOrder にまとめてある。
-   強さ 0〜100 = 平均的なレートの相手への予想勝率 */
+/* 画面表示用の順位。canonicalOrder の並び順に、各画像の順位番号（rank）と、
+   レートを強さ 0〜100（平均的なレートの相手への予想勝率）に換算する関数（toPower）を添えて返す */
 function makeRanking() {
   const ids = allIds();
   const avg = mean(ids.map(id => state.ratings[id].r));
@@ -2498,8 +2539,8 @@ function makeTierRibbon(id) {
   ribbon.className = "tier-ribbon" + (tier !== null ? " assigned" : "");
   ribbon.textContent = tier !== null ? `Tier ${tier}` : "Tierを設定";
   ribbon.style.background = tier !== null ? tierColor(tier, state.tierMax) : "";
-  ribbon.disabled = isLocked(id);
-  ribbon.title = isLocked(id) ? "ロック中はTierを変えられません" : "";
+  ribbon.disabled = !canEdit(id);
+  ribbon.title = canEdit(id) ? "" : "ロック中はTierを変えられません";
   ribbon.addEventListener("click", () => openTierMenu(id, ribbon));
   return ribbon;
 }
@@ -2573,7 +2614,7 @@ function makeItemActions(id, index, ranking) {
   const deleteBtn = document.createElement("button");
   deleteBtn.className = "danger";
   deleteBtn.textContent = "削除";
-  deleteBtn.disabled = locked;
+  deleteBtn.disabled = !canEdit(id);
   confirmTwice(deleteBtn, "もう一度押すと削除", () => deleteImage(id));
 
   const lockBtn = document.createElement("button");
@@ -2626,9 +2667,9 @@ function render(keepPair = false) {
 
   $("undoBtn").disabled = !state.hist.length;
   $("empty").hidden = allIds().length > 0;
-  $("tierAddBtn").disabled = state.tierMax >= TIER_MAX_CAP || anyLocked();
-  $("compactTiersBtn").disabled = anyLocked();
-  $("resetAllTiersBtn").disabled = anyLocked();
+  $("tierAddBtn").disabled = state.tierMax >= TIER_MAX_CAP || !canEditTierBoxes();
+  $("compactTiersBtn").disabled = !canEditTierBoxes();
+  $("resetAllTiersBtn").disabled = !canEditTierBoxes();
 
   renderStatus();
   renderArena(ranking);
@@ -2731,7 +2772,7 @@ function migrateOldState(saved) {
     count[index[a]]++;
     count[index[b]]++;
   }
-  for (let iter = 0; iter < 300; iter++) {
+  for (let iter = 0; iter < MIGRATE_ITERATIONS; iter++) {
     const denom = strength.map(s => 2 / (s + 1));
     for (const [a, b] of comps) {
       const i = index[a], j = index[b], v = 1 / (strength[i] + strength[j]);
@@ -2743,7 +2784,7 @@ function migrateOldState(saved) {
 
   const next = emptyState();
   next.names = names;  ids.forEach((id, i) => {
-    next.ratings[id] = newRating(RATING_START + 400 * Math.log10(strength[i]), { rd: 200, n: count[i], p: 0, w: 0, last: 0 });
+    next.ratings[id] = newRating(RATING_START + 400 * Math.log10(strength[i]), { rd: MIGRATE_RD, n: count[i], p: 0, w: 0, last: 0 });
   });
   return next;
 }
@@ -2753,7 +2794,7 @@ function migrateOldState(saved) {
    ================================================================== */
 (async () => {
   const saved = await db("kv", "readonly", s => s.get("state"));
-  if (saved && saved.version === 3) state = saved;
+  if (saved && saved.version === SAVE_VERSION) state = saved;
   else if (saved && saved.names) state = migrateOldState(saved);
 
   const records = (await db("images", "readonly", s => s.getAll())) || [];
