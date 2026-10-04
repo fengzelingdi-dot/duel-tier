@@ -14,14 +14,55 @@
        色とフォント
        ================================================================ */
     :root {
-      --bg:      #F8F8FB;  /* 背景 */
-      --surface: #FFFFFF;  /* カードやパネル */
-      --ink:     #1A1C24;  /* 本文 */
-      --sub:     #5A6072;  /* 補足の文字 */
-      --line:    #D9DCE6;  /* 枠線 */
-      --blue:    #0017C1;  /* 強調・主ボタン */
-      --red:     #CE0000;  /* 削除系 */
-      --on-blue: #FFFFFF;  /* 青の上の文字 */
+      /* ---- カラーパレット：色の元になる値。画面で使う色は、すべてここの名前で指定する ---- */
+      /* 白・黒 */
+      --white: #FFFFFF; --black: #000000;
+      /* 青みのあるグレー（ライトモードの面・枠・ボタン） */
+      --gray-50: #F8F8FB; --gray-100: #E8EBF3; --gray-200: #D9DCE6; --gray-300: #AEB5CB; --gray-400: #9AA2BC; --gray-900: #1A1C24;
+      /* 無彩色のグレー（文字・シートの線） */
+      --ash-500: #3A3A3A; --ash-600: #333333; --ash-700: #2A2A2A;
+      /* ダークモードの面・文字・ボタン */
+      --night-100: #ECEEF4; --night-300: #A3A9BA; --night-500: #4A5070; --night-600: #2E3345; --night-650: #2E3242; --night-700: #1E2230; --night-750: #1C1F29; --night-800: #12141B; --night-900: #07080C;
+      /* 青 */
+      --blue-100: #C9D3FF; --blue-200: #7C90FF; --blue-250: #6F84FF; --blue-300: #5C74FF; --blue-400: #4A60E8; --blue-500: #2F46DB; --blue-600: #2B3BA8; --blue-700: #0017C1; --blue-750: #0012A8; --blue-800: #000C70; --blue-850: #151E6E; --blue-900: #000A5C; --navy-900: #050A33; --navy-950: #080A28; --sky-300: #52B0FF; --sky-500: #1E82FF;
+      /* 赤 */
+      --red-200: #FF8080; --red-300: #FF5C5C; --red-400: #E34A4A; --red-500: #E32D2D; --red-600: #CE0000; --red-700: #B00000; --red-750: #A02626; --red-800: #6E0000; --red-850: #5E1414; --red-900: #5A0000;
+      /* 金（ロック中） */
+      --gold-300: #E4B814; --gold-500: #BE9200; --gold-700: #8A6A00; --gold-800: #7A5E00;
+      /* 影の色 */
+      --shade-900: #141828;
+      /* 透明度つきの色（パレットの色に透明度を足したもの。名前の末尾の数字が不透明度の%） */
+      --black-a18: color-mix(in srgb, var(--black) 18%, transparent);
+      --black-a25: color-mix(in srgb, var(--black) 25%, transparent);
+      --black-a30: color-mix(in srgb, var(--black) 30%, transparent);
+      --black-a35: color-mix(in srgb, var(--black) 35%, transparent);
+      --black-a55: color-mix(in srgb, var(--black) 55%, transparent);
+      --navy-950-a90: color-mix(in srgb, var(--navy-950) 90%, transparent);
+      --shade-900-a10: color-mix(in srgb, var(--shade-900) 10%, transparent);
+      --shade-900-a14: color-mix(in srgb, var(--shade-900) 14%, transparent);
+      --shade-900-a18: color-mix(in srgb, var(--shade-900) 18%, transparent);
+      --shade-900-a20: color-mix(in srgb, var(--shade-900) 20%, transparent);
+      --sky-500-a80: color-mix(in srgb, var(--sky-500) 80%, transparent);
+      --white-a14: color-mix(in srgb, var(--white) 14%, transparent);
+      --white-a35: color-mix(in srgb, var(--white) 35%, transparent);
+      --white-a38: color-mix(in srgb, var(--white) 38%, transparent);
+      --white-a40: color-mix(in srgb, var(--white) 40%, transparent);
+      --white-a85: color-mix(in srgb, var(--white) 85%, transparent);
+      --white-a95: color-mix(in srgb, var(--white) 95%, transparent);
+
+      /* ---- 用途ごとの色：パレットの名前から指定する ---- */
+      --bg:      var(--gray-50);  /* 背景 */
+      --surface: var(--white);  /* カードやパネル */
+      --ink:     var(--gray-900);  /* 本文 */
+      --sub:     var(--ash-600);  /* 補足の文字 */
+      --line:    var(--gray-200);  /* 枠線 */
+      --blue:    var(--blue-700);  /* 強調・主ボタン */
+      --red:     var(--red-600);  /* 削除系 */
+      --on-blue: var(--white);  /* 青の上の文字 */
+      --rd-top: var(--red-500); --rd-bottom: var(--red-700); --rd-edge: var(--red-800); --rd-lip: var(--red-900); --rd-hi: var(--white-a38);
+      --vs-top: var(--blue-600); --vs-bottom: var(--navy-900); --vs-stroke: var(--white-a85);
+      --btn-top: var(--white); --btn-bottom: var(--gray-100); --btn-edge: var(--gray-300); --btn-lip: var(--gray-400); --btn-hi: var(--white-a95);
+      --pri-top: var(--blue-500); --pri-bottom: var(--blue-750); --pri-edge: var(--blue-800); --pri-lip: var(--blue-900); --pri-hi: var(--white-a38);
       --img-aspect: 0.75;  /* 幅/高さ。選んだリサイズ比率に合わせてJSから書き換える */
 
       --font: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
@@ -34,13 +75,21 @@
     /* ダークモード：端末がダークモードのときだけ使われる */
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
-        --bg: #12141B; --surface: #1C1F29; --ink: #ECEEF4; --sub: #A3A9BA;
-        --line: #2E3242; --blue: #5C74FF; --red: #FF5C5C; --on-blue: #FFFFFF;
+        --bg: var(--night-800); --surface: var(--night-750); --ink: var(--night-100); --sub: var(--night-300);
+        --line: var(--night-650); --blue: var(--blue-300); --red: var(--red-300); --on-blue: var(--white);
+        --rd-top: var(--red-200); --rd-bottom: var(--red-400); --rd-edge: var(--red-750); --rd-lip: var(--red-850); --rd-hi: var(--white-a40);
+        --vs-top: var(--blue-100); --vs-bottom: var(--blue-250); --vs-stroke: var(--navy-950-a90);
+        --btn-top: var(--night-600); --btn-bottom: var(--night-700); --btn-edge: var(--night-500); --btn-lip: var(--night-900); --btn-hi: var(--white-a14);
+        --pri-top: var(--blue-200); --pri-bottom: var(--blue-400); --pri-edge: var(--blue-600); --pri-lip: var(--blue-850); --pri-hi: var(--white-a35);
       }
     }
     :root[data-theme="dark"] {
-      --bg: #12141B; --surface: #1C1F29; --ink: #ECEEF4; --sub: #A3A9BA;
-      --line: #2E3242; --blue: #5C74FF; --red: #FF5C5C; --on-blue: #FFFFFF;
+      --bg: var(--night-800); --surface: var(--night-750); --ink: var(--night-100); --sub: var(--night-300);
+      --line: var(--night-650); --blue: var(--blue-300); --red: var(--red-300); --on-blue: var(--white);
+      --rd-top: var(--red-200); --rd-bottom: var(--red-400); --rd-edge: var(--red-750); --rd-lip: var(--red-850); --rd-hi: var(--white-a40);
+      --vs-top: var(--blue-100); --vs-bottom: var(--blue-250); --vs-stroke: var(--navy-950-a90);
+      --btn-top: var(--night-600); --btn-bottom: var(--night-700); --btn-edge: var(--night-500); --btn-lip: var(--night-900); --btn-hi: var(--white-a14);
+      --pri-top: var(--blue-200); --pri-bottom: var(--blue-400); --pri-edge: var(--blue-600); --pri-lip: var(--blue-850); --pri-hi: var(--white-a35);
     }
 
     /* ================================================================
@@ -119,28 +168,77 @@
     }
     .title-row input:focus-visible { outline: 3px solid var(--blue); outline-offset: 1px; }
     .title-row .title-suffix { color: var(--ink); white-space: nowrap; }
-    .title-row #helpBtn { margin-left: 8px; white-space: nowrap; }
+    .head-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px 16px;
+    }
+    .head-row #helpBtn { white-space: nowrap; }
 
     .toolbar {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 10px 24px;
       margin-top: 14px;
     }
+    .tool-group { display: flex; flex-wrap: wrap; gap: 8px; }
 
+    /* 立体的なボタン：上から下へのグラデーション、上端の光、下に見える厚み（lip）で浮いて見せ、
+       押すと厚みぶん沈む */
     .btn {
+      --b-top: var(--btn-top); --b-bottom: var(--btn-bottom); --b-edge: var(--btn-edge);
+      --b-lip: var(--btn-lip); --b-hi: var(--btn-hi);
       position: relative;
-      padding: 8px 16px;
-      border: 2px solid var(--line);
+      padding: 9px 17px;
+      border: 1px solid var(--b-edge);
       border-radius: 10px;
       background: var(--surface);
+      background: linear-gradient(180deg, var(--b-top), var(--b-bottom));
       color: var(--ink);
       font-size: 1rem;
+      font-weight: 700;
       cursor: pointer;
+      box-shadow: inset 0 1px 0 var(--b-hi), 0 3px 0 var(--b-lip), 0 6px 10px var(--shade-900-a14);
+      transition: transform .1s ease, box-shadow .1s ease, border-color .12s ease, color .12s ease, filter .12s ease;
     }
-    .btn.primary { background: var(--blue); border-color: var(--blue); color: var(--on-blue); }
-    .btn.danger  { background: var(--red); border-color: var(--red); color: var(--on-blue); }
-    .btn:disabled { opacity: .45; cursor: default; }
+    .btn.primary {
+      --b-top: var(--pri-top); --b-bottom: var(--pri-bottom); --b-edge: var(--pri-edge);
+      --b-lip: var(--pri-lip); --b-hi: var(--pri-hi);
+      color: var(--on-blue);
+      text-shadow: 0 1px 1px var(--black-a35);
+    }
+    /* 破壊的な操作：赤地に白字 */
+    .btn.subtle-danger {
+      --b-top: var(--rd-top); --b-bottom: var(--rd-bottom); --b-edge: var(--rd-edge);
+      --b-lip: var(--rd-lip); --b-hi: var(--rd-hi);
+      color: var(--white);
+      text-shadow: 0 1px 1px var(--black-a35);
+    }
+    .btn:active:not(:disabled) {
+      transform: translateY(3px);
+      box-shadow: inset 0 2px 4px var(--shade-900-a18), 0 0 0 var(--b-lip), 0 1px 2px var(--shade-900-a10);
+    }
+    .btn:disabled { opacity: .5; cursor: default; box-shadow: inset 0 1px 0 var(--b-hi); }
+    .btn:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+    @media (hover: hover) {
+      .btn:hover:not(:disabled) {
+        transform: translateY(-1px);
+        border-color: var(--blue);
+        box-shadow: inset 0 1px 0 var(--b-hi), 0 4px 0 var(--b-lip), 0 8px 14px var(--shade-900-a18);
+      }
+      .btn.primary:hover:not(:disabled) { border-color: var(--pri-edge); filter: brightness(1.1); }
+      .btn:active:not(:disabled) {
+        transform: translateY(3px);
+        box-shadow: inset 0 2px 4px var(--shade-900-a18), 0 0 0 var(--b-lip), 0 1px 2px var(--shade-900-a10);
+      }
+      .btn.subtle-danger:hover:not(:disabled) { border-color: var(--rd-edge); filter: brightness(1.08); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .btn, .item-actions button, .card-del { transition: none; }
+      .btn:hover:not(:disabled), .btn:active:not(:disabled) { transform: none; }
+    }
 
     .note {
       margin: 8px 0 0;
@@ -208,15 +306,49 @@
       margin-top: 12px;
     }
 
+    /* 中央の縦の光る線と、その上に少し重ねたVS（Vを上、Sを下に少しずらす） */
     .vs {
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      position: relative;
+      width: 48px;
       height: 100%;
-      color: var(--ink);
-      font-weight: 700;
-      font-size: 3.4rem;
     }
+    .vs::before, .vs::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+    }
+    .vs::before {
+      top: -6px;
+      bottom: -6px;
+      width: 5px;
+      transform: translateX(-2.5px);
+      background: linear-gradient(180deg, transparent, var(--sky-500) 12%, var(--sky-300) 50%, var(--sky-500) 88%, transparent);
+      filter: drop-shadow(0 0 5px var(--sky-500-a80));
+    }
+    .vs::after {
+      top: -6px;
+      bottom: -6px;
+      width: 1.5px;
+      transform: translateX(-.75px);
+      background: linear-gradient(180deg, transparent, var(--white) 20%, var(--white) 80%, transparent);
+    }
+    .vs span {
+      position: absolute;
+      z-index: 1;
+      top: 50%;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 58px;
+      line-height: 1;
+      font-weight: 400;
+      background: linear-gradient(180deg, var(--vs-top), var(--vs-bottom));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      -webkit-text-stroke: 1px var(--vs-stroke);
+      filter: drop-shadow(0 2px 4px var(--black-a35));
+    }
+    .vs .v { right: calc(50% - 5px); transform: translateY(calc(-50% - 4px)); }
+    .vs .s { left: calc(50% - 5px);  transform: translateY(calc(-50% + 4px)); }
 
     .card-col {
       display: flex;
@@ -228,14 +360,22 @@
     .card-del {
       position: relative;
       align-self: center;
-      padding: 5px 14px;
-      border: 2px solid var(--red);
+      padding: 6px 15px;
+      border: 1px solid var(--rd-edge);
       border-radius: 8px;
-      background: transparent;
-      color: var(--red);
+      background: var(--red);
+      background: linear-gradient(180deg, var(--rd-top), var(--rd-bottom));
+      color: var(--white);
+      text-shadow: 0 1px 1px var(--black-a35);
       font-size: .85rem;
       font-weight: 700;
       cursor: pointer;
+      box-shadow: inset 0 1px 0 var(--rd-hi), 0 3px 0 var(--rd-lip);
+      transition: transform .1s ease, box-shadow .1s ease, filter .12s ease;
+    }
+    .card-del:active { transform: translateY(3px); box-shadow: inset 0 2px 4px var(--black-a25); }
+    @media (hover: hover) {
+      .card-del:hover { filter: brightness(1.08); }
     }
 
     .card {
@@ -253,6 +393,8 @@
       transition: border-color .15s, transform .08s;
     }
     .card:hover  { border-color: var(--blue); }
+    /* キーボードで選んでいる間は、マウスが乗ったままのカードの枠を青くしない */
+    body.kbd .card:hover { border-color: var(--line); }
     .card:active { transform: scale(.98); }
     .card img {
       display: block;
@@ -347,7 +489,7 @@
       text-align: center;
       cursor: pointer;
     }
-    .tier-ribbon.assigned { color: #FFFFFF; }
+    .tier-ribbon.assigned { color: var(--white); }
     .tier-ribbon:disabled { opacity: .5; cursor: default; }
 
     .item-actions {
@@ -359,18 +501,43 @@
     .item-actions .wide { grid-column: 1 / -1; }
     .item-actions button {
       position: relative;
-      padding: 3px 2px;
-      border: 2px solid var(--line);
+      padding: 4px 3px;
+      border: 1px solid var(--btn-edge);
       border-radius: 6px;
-      background: transparent;
+      background: var(--surface);
+      background: linear-gradient(180deg, var(--btn-top), var(--btn-bottom));
       color: var(--ink);
       font-size: .72rem;
       cursor: pointer;
+      box-shadow: inset 0 1px 0 var(--btn-hi), 0 2px 0 var(--btn-lip);
+      transition: transform .1s ease, box-shadow .1s ease, border-color .12s ease;
     }
-    .item-actions .danger { color: var(--red); }
+    .item-actions button:disabled { opacity: .4; cursor: default; box-shadow: inset 0 1px 0 var(--btn-hi); }
+    .item-actions button:active:not(:disabled) {
+      transform: translateY(2px);
+      box-shadow: inset 0 1px 3px var(--shade-900-a20);
+    }
+    @media (hover: hover) {
+      .item-actions button:hover:not(:disabled) { border-color: var(--blue); }
+      .item-actions .danger:hover:not(:disabled) { border-color: var(--rd-edge); filter: brightness(1.08); }
+    }
+    .item-actions .danger {
+      background: var(--red);
+      background: linear-gradient(180deg, var(--rd-top), var(--rd-bottom));
+      border-color: var(--rd-edge);
+      color: var(--white);
+      text-shadow: 0 1px 1px var(--black-a35);
+      box-shadow: inset 0 1px 0 var(--rd-hi), 0 2px 0 var(--rd-lip);
+    }
     .item-actions .wide   { grid-column: 1 / -1; }
     .item-actions .move   { font-weight: 700; }
-    .item-actions .lock.active { background: #D2A400; border-color: #D2A400; color: #FFFFFF; }
+    .item-actions .lock.active {
+      background: linear-gradient(180deg, var(--gold-300), var(--gold-500));
+      border-color: var(--gold-700);
+      color: var(--white);
+      text-shadow: 0 1px 1px var(--black-a30);
+      box-shadow: inset 0 1px 0 var(--white-a40), 0 2px 0 var(--gold-800);
+    }
 
     .compact-row {
       display: flex;
@@ -378,11 +545,11 @@
       gap: 8px;
       margin-top: 20px;
     }
-    .btn.tier-reset { background: #000000; border-color: #000000; color: #FFFFFF; }
 
     @media (max-width: 480px) {
       .duel { gap: 6px; }
-      .vs { font-size: 2.4rem; }
+      .vs { width: 34px; }
+      .vs span { font-size: 42px; }
       .arena-actions { grid-template-columns: 1fr; justify-items: center; }
       .arena-actions #undoBtn, .arena-actions #powerBtn { justify-self: center; }
     }
@@ -407,7 +574,7 @@
       font-size: 1.05rem;
       font-weight: 700;
       text-align: center;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, .3);
+      box-shadow: 0 10px 30px var(--black-a30);
       opacity: 0;
       pointer-events: none;
       transform: translateX(-50%) translateY(-14px);
@@ -431,13 +598,13 @@
       padding: 6px 10px;
       border-radius: 8px;
       background: var(--red);
-      color: #FFFFFF;
+      color: var(--white);
       font-size: .78rem;
       font-weight: 700;
       line-height: 1.4;
       text-align: center;
       pointer-events: none;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, .25);
+      box-shadow: 0 4px 14px var(--black-a25);
     }
     .confirm-tip::before {
       content: "";
@@ -464,7 +631,7 @@
       border: 2px solid var(--line);
       border-radius: 10px;
       background: var(--surface);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+      box-shadow: 0 8px 24px var(--black-a18);
     }
     .sample-menu[hidden] { display: none; }
     .sample-menu-note { margin: 0 0 8px; color: var(--red); font-size: .82rem; }
@@ -493,7 +660,7 @@
       border: 2px solid var(--line);
       border-radius: 10px;
       background: var(--surface);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+      box-shadow: 0 8px 24px var(--black-a25);
     }
     .tier-menu[hidden] { display: none; }
     .tier-menu-options { display: flex; flex-direction: column; gap: 4px; }
@@ -522,7 +689,7 @@
       align-items: center;
       justify-content: center;
       padding: 20px;
-      background: rgba(0, 0, 0, .55);
+      background: var(--black-a55);
     }
     .modal-overlay[hidden] { display: none; }
 
@@ -562,7 +729,7 @@
 
     .modal-body h3 {
       margin: 20px 0 6px;
-      font-size: 1.05rem;
+      font-size: 1.2rem;
       color: var(--blue);
     }
     .modal-body h3:first-child { margin-top: 8px; }
@@ -606,33 +773,43 @@
 <main>
 
   <header>
-    <h1>二択式ランキングメーカー</h1>
+    <div class="head-row">
+      <h1>二択式ランキングメーカー</h1>
+      <button class="btn" id="helpBtn">使い方</button>
+    </div>
     <div class="title-row">
       <input type="text" id="titleInput" aria-label="タイトル" placeholder="例：好きな漫画" maxlength="40">
       <span class="title-suffix">ランキング</span>
-      <button class="btn" id="helpBtn">使い方</button>
     </div>
     <div class="toolbar">
-      <button class="btn primary" id="addBtn">画像を追加</button>
-      <span class="sample-picker" id="resizePicker">
-        <button class="btn" id="resizeBtn">リサイズ</button>
-        <div class="sample-menu" id="resizeMenu" hidden>
-          <div class="sample-menu-options" id="resizeMenuOptions"></div>
-        </div>
-      </span>
-      <button class="btn" id="exportBtn">保存</button>
-      <button class="btn" id="importBtn">読み込み</button>
-      <span class="sample-picker" id="samplePicker" hidden>
-        <button class="btn" id="sampleBtn">サンプル</button>
-        <div class="sample-menu" id="sampleMenu" hidden>
-          <p class="sample-menu-note" id="sampleMenuNote" hidden>今のデータは消えます</p>
-          <div class="sample-menu-options" id="sampleMenuOptions"></div>
-        </div>
-      </span>
-      <button class="btn" id="sheetBtn">シート作成</button>
-      <button class="btn" id="nameBtn">名前を隠す</button>
-      <button class="btn" id="resetAllRatingsBtn">全初期化</button>
-      <button class="btn danger" id="resetBtn">すべて削除</button>
+      <div class="tool-group">
+        <button class="btn primary" id="addBtn">画像を追加</button>
+        <span class="sample-picker" id="resizePicker">
+          <button class="btn" id="resizeBtn">リサイズ</button>
+          <div class="sample-menu" id="resizeMenu" hidden>
+            <div class="sample-menu-options" id="resizeMenuOptions"></div>
+          </div>
+        </span>
+      </div>
+      <div class="tool-group">
+        <button class="btn" id="exportBtn">保存</button>
+        <button class="btn" id="importBtn">読み込み</button>
+        <span class="sample-picker" id="samplePicker" hidden>
+          <button class="btn" id="sampleBtn">サンプル</button>
+          <div class="sample-menu" id="sampleMenu" hidden>
+            <p class="sample-menu-note" id="sampleMenuNote" hidden>今のデータは消えます</p>
+            <div class="sample-menu-options" id="sampleMenuOptions"></div>
+          </div>
+        </span>
+      </div>
+      <div class="tool-group">
+        <button class="btn" id="sheetBtn">シート作成</button>
+        <button class="btn" id="nameBtn">名前を隠す</button>
+      </div>
+      <div class="tool-group end">
+        <button class="btn subtle-danger" id="resetAllRatingsBtn">全初期化</button>
+        <button class="btn subtle-danger" id="resetBtn">すべて削除</button>
+      </div>
     </div>
   </header>
 
@@ -652,7 +829,6 @@
   <section class="arena" id="arena" hidden>
     <div class="arena-top">
       <span>好きなほうを選んでください。← → で選択、↓ で同じくらい、Z で Undo</span>
-      <span id="stability"></span>
     </div>
 
     <div class="duel">
@@ -664,7 +840,7 @@
         </button>
         <button class="card-del" id="leftDeleteBtn" hidden>削除</button>
       </div>
-      <div class="vs">VS</div>
+      <div class="vs" role="img" aria-label="VS"><span class="v" aria-hidden="true">V</span><span class="s" aria-hidden="true">S</span></div>
       <div class="card-col">
         <button class="card" id="rightCard">
           <img alt="">
@@ -815,7 +991,6 @@ const jitteredRating = base => base + (Math.random() - 0.5) * RATING_JITTER;
 const PLACEMENT_N    = 4;     // 新しい画像の配置比較の回数（表示や強さの公開はここまで）
 const PLACEMENT_WIDE_N = 7;   // 幅広い相手と当てる期間（表示には出さず、内部の挙動だけ長く続ける）
 const HISTORY_MAX    = 300;   // Undo で戻れる回数
-const STABILITY_SPAN = 20;    // 順位変動を測る直近の比較数
 const RECENT_KEYS_MAX = 10;   // 同じ組み合わせを避けておく直近の回数
 const TIER_MAX_DEFAULT = 5;   // Tierの箱数の初期値・下限
 const TIER_MAX_CAP     = 20;  // Tierの箱数の上限
@@ -1084,6 +1259,14 @@ async function db(storeName, mode, operation) {
 
 const saveState = () => db("kv", "readwrite", s => s.put(JSON.parse(JSON.stringify(state)), "state"));
 
+/* 色は、CSSの :root に書いたカラーパレット（--white や --ash-500 など）から名前で読む。
+   canvas に描くシート画像の色も、ここを通して同じパレットから指定する */
+const pal = name => getComputedStyle(document.documentElement).getPropertyValue(`--${name}`).trim();
+const palAlpha = (name, alpha) => {
+  const n = parseInt(pal(name).replace("#", ""), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+};
+
 /* 画像を IMAGE_ASPECT の縦横比に中央でトリミングしてから、
    幅・高さとも一定のサイズに縮小して JPEG にする。
    すべての画像がここで同じ縦横比・同じ寸法になるので、
@@ -1115,7 +1298,7 @@ async function shrinkImage(file) {
     canvas.height = IMAGE_HEIGHT;
     canvas.width  = Math.round(IMAGE_HEIGHT * aspect);
     const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#FFFFFF";
+    ctx.fillStyle = pal("white");
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
     return await new Promise(r => canvas.toBlob(b => r(b || file), "image/jpeg", 0.88));
@@ -1237,6 +1420,9 @@ const RESULT = { LEFT: 0, RIGHT: 1, TIE: 2 };
 
 function answer(result) {
   if (!pair) return;
+  // 選んだカードにフォーカスが残ると、次の比較以降もずっと青い枠が出続けるので外す
+  const active = document.activeElement;
+  if (active && active.classList && active.classList.contains("card")) active.blur();
   const [left, right] = pair;
   recentKeys.push(pairKey(left, right));
   if (recentKeys.length > RECENT_KEYS_MAX) recentKeys.shift();
@@ -1686,8 +1872,8 @@ function cleanUpState() {
 const SHEET_COLS = 10;
 const SHEET_CELL_W = 140; // 高さは、そのとき選ばれているリサイズ比率から決める（buildSheet内のcellH）
 const SHEET_LABEL_W = 110;
-const SHEET_LINE = "#3A3A3A";   // 行や列を仕切る線
-const SHEET_BG = "#000000";     // 背景
+const SHEET_LINE = pal("ash-500");   // 行や列を仕切る線
+const SHEET_BG = pal("black");     // 背景
 
 function loadImageElement(src) {
   return new Promise((resolve, reject) => {
@@ -1737,7 +1923,7 @@ function buildTierRows(ranking, tierNames) {
   const rows = [];
   for (const g of groups) {
     const label = g.tier === null ? "未定" : (tierNames && tierNames[g.tier]) || `Tier ${g.tier}`;
-    const color = g.tier === null ? "#000000" : tierColor(g.tier, state.tierMax);
+    const color = g.tier === null ? pal("black") : tierColor(g.tier, state.tierMax);
     const rowsInGroup = Math.ceil(g.ids.length / SHEET_COLS);
     for (let i = 0; i < g.ids.length; i += SHEET_COLS) {
       rows.push({ ids: g.ids.slice(i, i + SHEET_COLS), label, color, groupStart: i === 0, groupSpan: rowsInGroup });
@@ -1773,7 +1959,7 @@ async function buildSheet(rows, ranking, title) {
   ctx.fillRect(0, 0, width, height);
 
   if (title) {
-    ctx.fillStyle = "#FFFFFF";
+    ctx.fillStyle = pal("white");
     ctx.font = "bold 32px 'Zen Kaku Gothic New', sans-serif";
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
@@ -1790,7 +1976,7 @@ async function buildSheet(rows, ranking, title) {
     const h = groupSpan * cellH;
     ctx.fillStyle = color;
     ctx.fillRect(0, y, SHEET_LABEL_W, h);
-    ctx.fillStyle = "#FFFFFF";
+    ctx.fillStyle = pal("white");
     ctx.font = "bold 26px 'Zen Kaku Gothic New', sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -1812,14 +1998,14 @@ async function buildSheet(rows, ranking, title) {
         const img = await loadImageElement(urls[id]);
         drawCover(ctx, img, x, y, SHEET_CELL_W, cellH);
       } catch (e) {
-        ctx.fillStyle = "#2A2A2A";
+        ctx.fillStyle = pal("ash-700");
         ctx.fillRect(x, y, SHEET_CELL_W, cellH);
       }
 
       // 画像の左上に小さく順位番号（全体の中での順位）
-      ctx.fillStyle = "rgba(0,0,0,.65)";
+      ctx.fillStyle = palAlpha("black", 0.65);
       ctx.fillRect(x, y, 30, 22);
-      ctx.fillStyle = "#FFFFFF";
+      ctx.fillStyle = pal("white");
       ctx.font = "bold 13px 'Zen Kaku Gothic New', sans-serif";
       ctx.fillText(String(ranking.rank[id] + 1), x + 6, y + 16);
     }
@@ -2198,30 +2384,13 @@ function powerText(id, ranking) {
 
 const placementText = item => `配置比較中 ${PLACEMENT_N - item.p}/${PLACEMENT_N}`;
 
-/* 直近 STABILITY_SPAN 回で順位がどれだけ動いたか。履歴を巻き戻した順位と比べる */
-function stabilityText(ranking) {
-  const ids = allIds(), H = state.hist.length;
-  if (H < STABILITY_SPAN || ids.length <= 2) return "";
-  const oldRating = {};
-  for (const id of ids) oldRating[id] = state.ratings[id].r;
-  for (let k = H - 1; k >= H - STABILITY_SPAN; k--) {
-    for (const id in state.hist[k].before) {
-      if (id in oldRating) oldRating[id] = state.hist[k].before[id].r;
-    }
-  }
-  const oldOrder = [...ids].sort((x, y) => oldRating[y] - oldRating[x]);
-  let moved = 0;
-  oldOrder.forEach((id, i) => { moved += Math.abs(ranking.rank[id] - i); });
-  return `直近${STABILITY_SPAN}回での順位変動 平均${(moved / ids.length).toFixed(1)}位`;
-}
-
 function renderStatus() {
   const ids = allIds();
   const placing = ids.filter(id => state.ratings[id].p > 0).length;
   let text = "";
   if (ids.length) {
-    text = `登録 ${ids.length}件、比較 ${state.t}回`;
-    if (placing) text += `、配置比較中 ${placing}件`;
+    text = `登録 ${ids.length}件　比較 ${state.t}回`;
+    if (placing) text += `　配置比較中 ${placing}件`;
     if (ids.length >= 2 && allIds().filter(id => !isLocked(id) && hasPartner(id)).length < 2) text += "。比較できる組み合わせがありません";
   }
   if (!storageOK) text += "。この環境では保存できないため、閉じると消えます";
@@ -2231,8 +2400,6 @@ function renderStatus() {
 function renderArena(ranking) {
   $("arena").hidden = !pair;
   if (!pair) return;
-
-  $("stability").textContent = stabilityText(ranking);
 
   for (const [card, deleteBtn, id] of [
     [$("leftCard"), $("leftDeleteBtn"), pair[0]],
@@ -2315,7 +2482,7 @@ function makeListItem(id, index, ranking) {
   const deleteBtn = document.createElement("button");
   deleteBtn.className = "danger";
   deleteBtn.textContent = "削除";
-  deleteBtn.addEventListener("click", () => deleteImage(id));
+  confirmTwice(deleteBtn, "もう一度押すと削除", () => deleteImage(id));
 
   const lockBtn = document.createElement("button");
   lockBtn.className = "lock" + (locked ? " active" : "");
@@ -2423,11 +2590,13 @@ $("nameBtn").addEventListener("click", () => {
   render(true);
 });
 
+document.addEventListener("mousemove", () => document.body.classList.remove("kbd"));
 document.addEventListener("keydown", e => {
   if (e.target.tagName === "INPUT") return;
   if (!helpOverlay.hidden) { if (e.key === "Escape") helpOverlay.hidden = true; return; }
   if (!$("tierNameOverlay").hidden) { if (e.key === "Escape") $("tierNameOverlay").hidden = true; return; }
   const key = e.key;
+  if (key === "ArrowLeft" || key === "ArrowRight" || key === "ArrowDown") document.body.classList.add("kbd");
   if (pair && key === "ArrowLeft")  { e.preventDefault(); answer(RESULT.LEFT); }
   else if (pair && key === "ArrowRight") { e.preventDefault(); answer(RESULT.RIGHT); }
   else if (pair && key === "ArrowDown")  { e.preventDefault(); answer(RESULT.TIE); }
