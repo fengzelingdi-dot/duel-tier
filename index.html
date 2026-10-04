@@ -516,6 +516,9 @@
       box-shadow: inset 0 1px 0 var(--white-a40), 0 2px 0 var(--gold-800);
     }
 
+    /* 文字の途中で折り返さず、この塊の境目でだけ折り返す（狭い画面で2行になるときの区切り位置を決める） */
+    .chunk { display: inline-block; }
+
     /* 順位一覧の下に並ぶTier用のボタン（Tier追加・Tierを詰める・Tier初期化） */
     .tier-tools {
       display: flex;
@@ -841,9 +844,9 @@
   <ol class="list" id="list"></ol>
 
   <div class="tier-tools">
-    <button class="btn" id="tierAddBtn">Tier追加</button>
-    <button class="btn" id="compactTiersBtn">Tierを詰める</button>
-    <button class="btn" id="resetAllTiersBtn">Tier初期化</button>
+    <button class="btn" id="tierAddBtn"><span class="chunk">Tier</span><span class="chunk">追加</span></button>
+    <button class="btn" id="compactTiersBtn"><span class="chunk">Tierを</span><span class="chunk">詰める</span></button>
+    <button class="btn" id="resetAllTiersBtn"><span class="chunk">Tier</span><span class="chunk">初期化</span></button>
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
@@ -2336,7 +2339,7 @@ $("tierAddBtn").addEventListener("click", () => {
   openTierAddMenu($("tierAddBtn"));
 });
 document.addEventListener("click", e => {
-  if (!$("tierAddMenu").contains(e.target) && e.target !== $("tierAddBtn")) {
+  if (!$("tierAddMenu").contains(e.target) && !$("tierAddBtn").contains(e.target)) {
     $("tierAddMenu").hidden = true;
   }
 });
