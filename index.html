@@ -1660,6 +1660,8 @@ function deleteImage(id) {
 /* 全初期化：画像はすべて残し、全員のレートと比較記録だけを新規追加と同じ状態に戻す。
    Tierの割り当てもすべて未定に戻る */
 function resetAllRatings() {
+  state.t = 0;            // 比較回数も0に戻す
+  recentKeys.length = 0;  // 直近に出した組み合わせの記録も消す
   const ids = allIds();
   const p = ids.length > 1 ? PLACEMENT_N : 0;
   const w = ids.length > 1 ? PLACEMENT_WIDE_N : 0;
@@ -2597,6 +2599,10 @@ document.addEventListener("keydown", e => {
   if (!$("tierNameOverlay").hidden) { if (e.key === "Escape") $("tierNameOverlay").hidden = true; return; }
   const key = e.key;
   if (key === "ArrowLeft" || key === "ArrowRight" || key === "ArrowDown") document.body.classList.add("kbd");
+  // ショートカットのキーを押すと、直前にマウスで押したボタンにフォーカスの青枠が出て残り続けるので、フォーカスを外しておく
+  if (["ArrowLeft", "ArrowRight", "ArrowDown", "z", "Z"].includes(key) && document.activeElement && document.activeElement !== document.body) {
+    document.activeElement.blur();
+  }
   if (pair && key === "ArrowLeft")  { e.preventDefault(); answer(RESULT.LEFT); }
   else if (pair && key === "ArrowRight") { e.preventDefault(); answer(RESULT.RIGHT); }
   else if (pair && key === "ArrowDown")  { e.preventDefault(); answer(RESULT.TIE); }
