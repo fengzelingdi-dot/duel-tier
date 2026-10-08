@@ -8,7 +8,7 @@
   <meta name="description" content="画像を二択で比べ続けて、レートで好きな順位を作るツール。画像はブラウザ内だけに保存されます。">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
 
   <style>
     /* ================================================================
@@ -474,7 +474,7 @@
       border-radius: 6px;
     }
     .item .name { margin-top: 3px; font-size: .8rem; overflow-wrap: anywhere; }
-    .item .meta { color: var(--sub); font-size: .68rem; }
+    .item .meta { color: var(--sub); font-size: .68rem; font-weight: 400; }
 
     .thumb { position: relative; }
     .thumb[draggable="true"] { cursor: grab; }
@@ -528,6 +528,7 @@
       gap: 8px;
       margin-top: 20px;
     }
+    .tier-tools[hidden] { display: none; }
 
     @media (max-width: 480px) {
       .duel { gap: 6px; }
@@ -701,6 +702,8 @@
     }
     .modal-body h3:first-child { margin-top: 8px; }
     .modal-body p, .modal-body li { font-size: .95rem; line-height: 1.75; }
+    /* 使い方の本文は長いので、太字にしない（見出しは太字のまま） */
+    #helpOverlay .modal-body p, #helpOverlay .modal-body li { font-weight: 400; }
     .modal-body ul { margin: 4px 0 0; padding-left: 1.2em; }
     .modal-body kbd {
       display: inline-block;
@@ -828,7 +831,7 @@
   <p id="tierBreakdown" hidden></p>
   <ol class="list" id="list"></ol>
 
-  <div class="tier-tools">
+  <div class="tier-tools" id="tierTools" hidden>
     <button class="btn" id="tierAddBtn"><span class="chunk">Tier</span><span class="chunk">追加</span></button>
     <button class="btn" id="compactTiersBtn"><span class="chunk">Tierを</span><span class="chunk">詰める</span></button>
     <button class="btn" id="resetAllTiersBtn"><span class="chunk">Tier</span><span class="chunk">初期化</span></button>
@@ -2230,6 +2233,7 @@ function render() {
 
   $("undoBtn").disabled = !state.history.length;
   $("empty").hidden = hasImages;
+  $("tierTools").hidden = !hasImages;
   $("resizeBtn").disabled = hasImages;
   $("resizeBtn").title = hasImages ? "画像があるあいだは変更できません" : "";
   $("tierAddBtn").disabled = state.tierCount >= TIER_COUNT_MAX || !tierBoxesEditable;
