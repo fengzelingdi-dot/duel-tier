@@ -186,10 +186,10 @@
     :where(.btn, .card-del, .item-actions button) {
       --b-top: var(--btn-top); --b-bottom: var(--btn-bottom); --b-edge: var(--btn-edge);
       --b-lip: var(--btn-lip); --b-hi: var(--btn-hi);
-      --b-ink: var(--ink);             /* 文字の色 */
-      --b-text-shadow: none;           /* 文字の影 */
-      --b-hover-edge: var(--blue);     /* マウスを乗せたときの枠の色 */
-      --b-hover-filter: none;          /* マウスを乗せたときの明るさ */
+      --b-ink: var(--ink);
+      --b-text-shadow: none;
+      --b-hover-edge: var(--blue);
+      --b-hover-filter: none;
     }
     .tone-primary {
       --b-top: var(--pri-top); --b-bottom: var(--pri-bottom); --b-edge: var(--pri-edge);
@@ -702,7 +702,7 @@
     }
     .modal-body h3:first-child { margin-top: 8px; }
     .modal-body p, .modal-body li { font-size: .95rem; line-height: 1.75; }
-    /* 使い方の本文は長いので、太字にしない（見出しは太字のまま） */
+    /* 使い方の本文は長文のため、普通の太さで表示する */
     #helpOverlay .modal-body p, #helpOverlay .modal-body li { font-weight: 400; }
     .modal-body ul { margin: 4px 0 0; padding-left: 1.2em; }
     .modal-body kbd {
@@ -974,9 +974,9 @@
    設定値
    ================================================================== */
 // レート計算（Glicko 方式）
-const RATING_START     = 1500;  // 最初の画像のレート
+const RATING_START     = 1500;
 const DEVIATION_START  = 350;   // 新しい画像の信頼幅（最大値）。信頼幅はレートの不確かさで、大きいほど1回の比較でレートが大きく動く
-const DEVIATION_MIN    = 50;    // 信頼幅の下限
+const DEVIATION_MIN    = 50;
 const DEVIATION_GROWTH = 25;    // 比較されない間に信頼幅が広がる速さ
 // 新しい画像の扱い
 const PLACEMENT_N      = 4;     // 配置比較の回数。この回数を終えるまでは強さを表示しない
@@ -994,7 +994,7 @@ const RATING_MIN_GAP   = 0.01;  // レートを整えるとき、隣り合う順
 const HISTORY_MAX      = 300;   // Undo で戻れる回数
 // Tier
 const TIER_COUNT_DEFAULT = 5;   // Tierの箱の数の初期値・下限
-const TIER_COUNT_MAX     = 20;  // Tierの箱の数の上限
+const TIER_COUNT_MAX     = 20;
 const TIER_NAME_MAX      = 20;  // シート作成時に付けるTier名の最大文字数
 const TIER_HUE_RANGE     = 270; // Tierの虹色：Tier 1 を色相0（赤）、最後のTierを色相270とし、間を均等に割り当てる
 const TIER_SATURATION    = 70;  // 彩度(%)
@@ -1007,7 +1007,7 @@ const ASPECTS = {               // 保存する画像の縦横比。キーとラ
 };
 const ASPECT_DEFAULT   = "3:4";
 const IMAGE_HEIGHT     = 640;   // 保存する画像の高さ(px)。幅は縦横比から決まる
-const JPEG_QUALITY     = 0.88;  // 保存する画像の画質
+const JPEG_QUALITY     = 0.88;
 // 画面の表示時間（ミリ秒）
 const MESSAGE_MS        = 3000;  // 上部の小さなお知らせが消えるまで
 const TOAST_MS          = 3500;  // 大きなお知らせが消え始めるまで
@@ -1035,9 +1035,9 @@ const SHEET_RANK_TEXT_X = 6;     // 四角の左上から見た、番号の書�
 const SHEET_RANK_TEXT_Y = 16;
 // サンプル
 const SAMPLE_DIR        = "samples/";    // サンプル画像のフォルダ。中の samples.json に一覧を書く
-const SAMPLE_COUNTS     = [20, 50, 100]; // サンプルの枚数の選択肢
+const SAMPLE_COUNTS     = [20, 50, 100];
 // 保存
-const DB_NAME           = "duel-tier";   // ブラウザ内の保存場所の名前
+const DB_NAME           = "duel-tier";
 const APP_ID            = "duel-tier";   // 保存ファイルがこのツールのものかを見分ける印
 const SAVE_VERSION      = 4;             // 保存データの形式の版。形式を変えたら上げる
 const PAGE_TITLE        = "二択式ランキングメーカー";
@@ -1077,9 +1077,9 @@ const RATING_FIELDS = ["rating", "deviation", "comparisons", "placementLeft", "w
 let state       = emptyState();
 let pair        = null;    // 比較画面に出している2枚の id [左, 右]。出せる組がなければ null
 let recentPairs = [];      // 直近に出題した組み合わせ（pairKey）。同じ組が短期間で続かないようにする
-let showPower   = true;    // 比較画面に強さを表示するか
-let showNames   = false;   // 比較画面と一覧に名前を表示するか
-let storageOK   = true;    // ブラウザ内への保存ができているか
+let showPower   = true;
+let showNames   = false;
+let storageOK   = true;
 let message     = "";      // 上部の小さなお知らせ
 const imageUrls = {};      // id → 画像を表示するための URL
 
@@ -1199,7 +1199,6 @@ const lockSide = id => ({ top: -1, bottom: 1 })[state.images[id].lock] || 0;
 const tierOf = id => state.images[id].tier;
 const usedTiers = () => uniqueSorted(ids().map(tierOf).filter(t => t !== null));
 const maxTier = () => Math.max(0, ...usedTiers());
-// 片方が未定、または同じTierなら比較できる
 const tierCompatible = (a, b) => {
   const ta = tierOf(a), tb = tierOf(b);
   return ta === null || tb === null || ta === tb;
@@ -1319,11 +1318,8 @@ function movableRange(id, order) {
    出題（次の2枚を選ぶ）
    ================================================================== */
 
-// 比較できる相手（自分以外で、ロックされておらず、Tierの合う画像）が1枚でもいるか
 const hasPartner = id => ids().some(b => b !== id && !isLocked(b) && tierCompatible(id, b));
-// 比較に出せる画像
 const pickableIds = () => ids().filter(id => !isLocked(id) && hasPartner(id));
-// 今の2枚をこのまま出し続けてよいか
 const isPairValid = ([a, b]) => state.images[a] && state.images[b] && !isLocked(a) && !isLocked(b) && tierCompatible(a, b);
 
 /* 画像 a から見た予想勝率が [low, high] に入る相手の候補。
@@ -1331,7 +1327,6 @@ const isPairValid = ([a, b]) => state.images[a] && state.images[b] && !isLocked(
 function findOpponents(a, low, high) {
   const candidates = ids().filter(b => b !== a && tierCompatible(a, b) && !isLocked(b));
   const fresh = candidates.filter(b => !recentPairs.includes(pairKey(a, b)));
-  // 直近の組み合わせを避けきれないときは、避けるのをやめる
   const others = fresh.length ? fresh : candidates;
   const inRange = others.filter(b => {
     const e = expectedWin(ratingOf(a), ratingOf(b));
@@ -1437,7 +1432,6 @@ function commit() {
   render();
 }
 
-/* 表示用の URL をすべて片付ける */
 function clearImageUrls() {
   for (const id in imageUrls) {
     URL.revokeObjectURL(imageUrls[id]);
@@ -1456,7 +1450,6 @@ function dropImagesWithoutData() {
    ================================================================== */
 const currentAspect = () => (ASPECTS[state.aspect] || ASPECTS[ASPECT_DEFAULT]).value;
 
-/* 比較画面・一覧の画像の枠を、今の縦横比に合わせる */
 function applyAspectCSS() {
   document.documentElement.style.setProperty("--img-aspect", currentAspect());
 }
@@ -1476,7 +1469,6 @@ async function shrinkImage(file) {
     const aspect = currentAspect();
     const srcAspect = bitmap.width / bitmap.height;
 
-    // 元画像から切り出す範囲
     let sx = 0, sy = 0, sw = bitmap.width, sh = bitmap.height;
     if (srcAspect > aspect) {
       sw = Math.round(bitmap.height * aspect);
@@ -1522,13 +1514,11 @@ const SCORE = { LEFT: 1, RIGHT: 0, TIE: 0.5 }; // 左の画像から見た得点
 
 const countPlacing = () => ids().filter(id => state.images[id].placementLeft > 0).length;
 
-/* Undo 用の履歴に1件足す。HISTORY_MAX 件を超えたら古いものから捨てる */
 function pushHistory(entry) {
   state.history.push(entry);
   if (state.history.length > HISTORY_MAX) state.history.shift();
 }
 
-/* 二択に答える。scoreLeft は SCORE のどれか */
 function answer(scoreLeft) {
   if (!pair) return;
   // 選んだカードにフォーカスが残ると、次の比較以降もずっと青い枠が出続けるので外す
@@ -1586,7 +1576,6 @@ function undo() {
    操作：画像の追加と削除
    ================================================================== */
 
-/* 何枚中どこまで終わったかを示す進捗バー */
 function setProgress(done, total) {
   $("progressTrack").hidden = false;
   $("progressLabel").hidden = false;
@@ -1624,7 +1613,6 @@ async function addImages(files) {
   const needsPlacement = ids().length + toAdd.length > 1;
   const startRating = mean(ids().map(ratingOf));
 
-  // 縮小と保存は、1枚ずつ待たずにまとめて並行に進める
   let done = 0;
   const total = toAdd.length;
   if (total > 1) setProgress(0, total);
@@ -1668,7 +1656,6 @@ function resetAllRatings() {
   commit();
 }
 
-/* すべて削除：画像も含め、何もない状態に戻す */
 async function deleteAll() {
   clearImageUrls();
   state = emptyState();
@@ -1999,7 +1986,6 @@ function drawText(ctx, text, x, y, size, align) {
   ctx.textBaseline = "alphabetic";
 }
 
-/* シートの一番上のタイトル */
 function drawSheetTitle(ctx, title, titleH) {
   drawText(ctx, title, SHEET_TITLE_PAD, titleH / 2, SHEET_TITLE_SIZE, "left");
 }
@@ -2193,7 +2179,6 @@ async function loadSamples(count) {
 let messageTimer = null;
 let toastTimer = null;
 
-/* 上部の小さなお知らせ。MESSAGE_MS ミリ秒で消える */
 function showMessage(text) {
   message = text;
   renderStatus();
@@ -2298,7 +2283,6 @@ function renderTierBreakdown(ranking) {
   el.textContent = groups.map(g => `Tier${g.tier}: ${g.ids.length}枚`).join("　");
 }
 
-/* 順位一覧のカード1枚。上から、Tierのリボン・画像・名前・強さ・操作ボタンの順に並べる */
 function makeListItem(id, index, ranking) {
   const li = document.createElement("li");
   li.className = "item";
@@ -2319,7 +2303,6 @@ function makeListItem(id, index, ranking) {
   return li;
 }
 
-/* Tierのリボン。未定なら灰色の「Tierを設定」、設定済みならTierの色で番号を出す。押すとTierを選ぶメニューが開く */
 function makeTierRibbon(id) {
   const ribbon = document.createElement("button");
   const tier = tierOf(id);
@@ -2333,7 +2316,6 @@ function makeTierRibbon(id) {
   return ribbon;
 }
 
-/* 左上に順位の番号を重ねた画像。ロックされていなければ、つかんでドラッグすると順位を動かせる */
 function makeThumb(id, index, li) {
   const locked = isLocked(id);
   const thumb = document.createElement("div");
@@ -2360,7 +2342,6 @@ function makeThumb(id, index, li) {
   return thumb;
 }
 
-/* 画像の名前。名前を隠しているときは空にする */
 function makeItemName(id) {
   const name = document.createElement("div");
   name.className = "name";
@@ -2368,7 +2349,6 @@ function makeItemName(id) {
   return name;
 }
 
-/* 強さと比較回数。配置比較の途中なら、その進み具合を出す */
 function makeItemMeta(id, ranking) {
   const image = state.images[id];
   const meta = document.createElement("div");
@@ -2377,7 +2357,6 @@ function makeItemMeta(id, ranking) {
   return meta;
 }
 
-/* 削除・ロック（解除）・←・→ のボタン。←→ は、movableRange の範囲から出る方向には押せない */
 function makeItemActions(id, index, ranking) {
   const locked = isLocked(id);
   const range = movableRange(id, ranking.order);
@@ -2514,7 +2493,6 @@ function showPopupBelow(menu, anchor) {
   menu.style.left = `${Math.max(MENU_MARGIN, left)}px`;
 }
 
-/* サンプルの枚数。SAMPLE_COUNTS のうち、実際にその枚数以上が用意されているものだけを出す */
 function fillSampleMenu() {
   fillMenu($("sampleMenuOptions"), SAMPLE_COUNTS.filter(n => n <= sampleList.length).map(n => ({
     text: `${n}枚`, onClick: () => loadSamples(n),
@@ -2522,14 +2500,12 @@ function fillSampleMenu() {
   $("sampleMenuNote").hidden = !ids().length;
 }
 
-/* 縦横比。今選ばれているものに ✓ を付ける */
 function fillResizeMenu() {
   fillMenu($("resizeMenuOptions"), Object.entries(ASPECTS).map(([key, a]) => ({
     text: (state.aspect === key ? "✓ " : "") + a.label, onClick: () => setAspect(key),
   })));
 }
 
-/* 画像のTierを選ぶメニュー */
 function openTierMenu(id, anchor) {
   const range = allowedTierRange(id);
   if (!range) return;
@@ -2541,7 +2517,6 @@ function openTierMenu(id, anchor) {
   showPopupBelow($("tierMenu"), anchor);
 }
 
-/* Tierの箱を挿入する位置を選ぶメニュー */
 function openTierAddMenu(anchor) {
   const n = state.tierCount;
   const label = pos => pos === 0 ? "Tier 1 の上に追加"
