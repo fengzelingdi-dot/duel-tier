@@ -49,19 +49,22 @@
       --white-a95: color-mix(in srgb, var(--white) 95%, transparent);
 
       /* ---- 用途ごとの色：パレットの名前から指定する ---- */
-      --bg:      var(--gray-50);  /* 背景 */
-      --surface: var(--white);  /* カードやパネル */
+      --bg:      var(--gray-50);   /* 背景 */
+      --surface: var(--white);     /* カードやパネル */
       --ink:     var(--gray-900);  /* 本文 */
-      --sub:     var(--ash-600);  /* 補足の文字 */
+      --sub:     var(--ash-600);   /* 補足の文字 */
       --line:    var(--gray-200);  /* 枠線 */
       --blue:    var(--blue-700);  /* 強調・主ボタン */
-      --red:     var(--red-600);  /* 削除系 */
-      --on-blue: var(--white);  /* 青の上の文字 */
-      --rd-top: var(--red-500); --rd-bottom: var(--red-700); --rd-edge: var(--red-800); --rd-lip: var(--red-900); --rd-hi: var(--white-a38);
-      --vs-top: var(--blue-600); --vs-bottom: var(--navy-900); --vs-stroke: var(--white-a85);
-      --btn-top: var(--white); --btn-bottom: var(--gray-100); --btn-edge: var(--gray-300); --btn-lip: var(--gray-400); --btn-hi: var(--white-a95);
+      --red:     var(--red-600);   /* 削除系 */
+      --on-blue: var(--white);     /* 青の上の文字 */
+      /* 立体ボタンの色の組（top/bottom：グラデーションの上端と下端、edge：枠、lip：下に見える厚み、hi：上端の光） */
+      --btn-top: var(--white);    --btn-bottom: var(--gray-100); --btn-edge: var(--gray-300); --btn-lip: var(--gray-400); --btn-hi: var(--white-a95);
       --pri-top: var(--blue-500); --pri-bottom: var(--blue-750); --pri-edge: var(--blue-800); --pri-lip: var(--blue-900); --pri-hi: var(--white-a38);
-      --img-aspect: 0.75;  /* 幅/高さ。選んだリサイズ比率に合わせてJSから書き換える */
+      --rd-top:  var(--red-500);  --rd-bottom:  var(--red-700);  --rd-edge:  var(--red-800);  --rd-lip:  var(--red-900);  --rd-hi:  var(--white-a38);
+      /* VSの文字 */
+      --vs-top: var(--blue-600); --vs-bottom: var(--navy-900); --vs-stroke: var(--white-a85);
+      /* 画像の枠の縦横比（幅 / 高さ）。選ばれている比率に合わせて JS から書き換える */
+      --img-aspect: 0.75;
 
       /* 端末がダークモードでも、いつもこの色（ライトモード）で表示する */
       color-scheme: only light;
@@ -105,6 +108,18 @@
       outline-offset: 2px;
     }
 
+    /* 1行の文字入力欄（タイトル欄、Tier名の入力欄） */
+    .text-input {
+      padding: 6px 10px;
+      border: 2px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--ink);
+      font: inherit;
+      font-weight: 700;
+    }
+    .text-input:focus-visible { outline: 3px solid var(--blue); outline-offset: 1px; }
+
     /* ================================================================
        見出しとツールバー
        ================================================================ */
@@ -126,28 +141,6 @@
       color: var(--sub);
     }
 
-    .title-row {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px;
-      margin-top: 10px;
-      font-size: 1rem;
-    }
-    .title-row input {
-      flex: 1 1 140px;
-      min-width: 120px;
-      max-width: 260px;
-      padding: 6px 10px;
-      border: 2px solid var(--line);
-      border-radius: 8px;
-      background: var(--surface);
-      color: var(--ink);
-      font: inherit;
-      font-weight: 700;
-    }
-    .title-row input:focus-visible { outline: 3px solid var(--blue); outline-offset: 1px; }
-    .title-row .title-suffix { color: var(--ink); white-space: nowrap; }
     .head-row {
       display: flex;
       flex-wrap: wrap;
@@ -157,6 +150,21 @@
     }
     .head-row #helpBtn { white-space: nowrap; }
 
+    .title-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 1rem;
+    }
+    .title-row .text-input {
+      flex: 1 1 140px;
+      min-width: 120px;
+      max-width: 260px;
+    }
+    .title-row .title-suffix { color: var(--ink); white-space: nowrap; }
+
     .toolbar {
       display: flex;
       flex-wrap: wrap;
@@ -165,61 +173,111 @@
     }
     .tool-group { display: flex; flex-wrap: wrap; gap: 8px; }
 
-    /* 立体的なボタン：上から下へのグラデーション、上端の光、下に見える厚み（lip）で浮いて見せ、
-       押すと厚みぶん沈む */
-    .btn {
+    /* ================================================================
+       立体的なボタン
+       上から下へのグラデーション、上端の光、下に見える厚み（lip）で浮いて見せ、押すと厚みぶん沈む。
+       使う場所は3つ：
+         .btn                 ツールバーなどの普通のボタン
+         .card-del            比較画面のカードの下の削除ボタン
+         .item-actions button 順位一覧の各画像の小さなボタン
+       色は --b-* の変数で決まり、tone-* クラスを付けると色の組がまとめて差し替わる。
+       変数の初期値は :where() の中に書いて詳細度を0にしてあるので、tone-* が必ず優先される
+       ================================================================ */
+    :where(.btn, .card-del, .item-actions button) {
       --b-top: var(--btn-top); --b-bottom: var(--btn-bottom); --b-edge: var(--btn-edge);
       --b-lip: var(--btn-lip); --b-hi: var(--btn-hi);
+      --b-ink: var(--ink);             /* 文字の色 */
+      --b-text-shadow: none;           /* 文字の影 */
+      --b-hover-edge: var(--blue);     /* マウスを乗せたときの枠の色 */
+      --b-hover-filter: none;          /* マウスを乗せたときの明るさ */
+    }
+    .tone-primary {
+      --b-top: var(--pri-top); --b-bottom: var(--pri-bottom); --b-edge: var(--pri-edge);
+      --b-lip: var(--pri-lip); --b-hi: var(--pri-hi);
+      --b-ink: var(--on-blue);
+      --b-text-shadow: 0 1px 1px var(--black-a35);
+      --b-hover-edge: var(--pri-edge);
+      --b-hover-filter: brightness(1.1);
+    }
+    /* 破壊的な操作：赤地に白字 */
+    .tone-danger {
+      --b-top: var(--rd-top); --b-bottom: var(--rd-bottom); --b-edge: var(--rd-edge);
+      --b-lip: var(--rd-lip); --b-hi: var(--rd-hi);
+      --b-ink: var(--white);
+      --b-text-shadow: 0 1px 1px var(--black-a35);
+      --b-hover-edge: var(--rd-edge);
+      --b-hover-filter: brightness(1.08);
+    }
+    /* ロック中：金地に白字 */
+    .tone-gold {
+      --b-top: var(--gold-300); --b-bottom: var(--gold-500); --b-edge: var(--gold-700);
+      --b-lip: var(--gold-800); --b-hi: var(--white-a40);
+      --b-ink: var(--white);
+      --b-text-shadow: 0 1px 1px var(--black-a30);
+    }
+
+    .btn, .card-del, .item-actions button {
       position: relative;
-      padding: 9px 17px;
       border: 1px solid var(--b-edge);
-      border-radius: 10px;
-      background: var(--surface);
       background: linear-gradient(180deg, var(--b-top), var(--b-bottom));
-      color: var(--ink);
-      font-size: 1rem;
+      color: var(--b-ink);
+      text-shadow: var(--b-text-shadow);
       font-weight: 700;
       cursor: pointer;
+    }
+
+    .btn {
+      padding: 9px 17px;
+      border-radius: 10px;
+      font-size: 1rem;
       box-shadow: inset 0 1px 0 var(--b-hi), 0 3px 0 var(--b-lip), 0 6px 10px var(--shade-900-a14);
       transition: transform .1s ease, box-shadow .1s ease, border-color .12s ease, color .12s ease, filter .12s ease;
     }
-    .btn.primary {
-      --b-top: var(--pri-top); --b-bottom: var(--pri-bottom); --b-edge: var(--pri-edge);
-      --b-lip: var(--pri-lip); --b-hi: var(--pri-hi);
-      color: var(--on-blue);
-      text-shadow: 0 1px 1px var(--black-a35);
+    .btn:disabled { opacity: .5; cursor: default; box-shadow: inset 0 1px 0 var(--b-hi); }
+    .btn:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+
+    .card-del {
+      align-self: center;
+      padding: 6px 15px;
+      border-radius: 8px;
+      font-size: .85rem;
+      box-shadow: inset 0 1px 0 var(--b-hi), 0 3px 0 var(--b-lip);
+      transition: transform .1s ease, box-shadow .1s ease, filter .12s ease;
     }
-    /* 破壊的な操作：赤地に白字 */
-    .btn.subtle-danger {
-      --b-top: var(--rd-top); --b-bottom: var(--rd-bottom); --b-edge: var(--rd-edge);
-      --b-lip: var(--rd-lip); --b-hi: var(--rd-hi);
-      color: var(--white);
-      text-shadow: 0 1px 1px var(--black-a35);
+
+    .item-actions button {
+      padding: 4px 3px;
+      border-radius: 6px;
+      font-size: .72rem;
+      box-shadow: inset 0 1px 0 var(--b-hi), 0 2px 0 var(--b-lip);
+      transition: transform .1s ease, box-shadow .1s ease, border-color .12s ease;
     }
+    .item-actions button:disabled { opacity: .4; cursor: default; box-shadow: inset 0 1px 0 var(--b-hi); }
+
+    @media (hover: hover) {
+      .btn:hover:not(:disabled) {
+        transform: translateY(-1px);
+        border-color: var(--b-hover-edge);
+        filter: var(--b-hover-filter);
+        box-shadow: inset 0 1px 0 var(--b-hi), 0 4px 0 var(--b-lip), 0 8px 14px var(--shade-900-a18);
+      }
+      .card-del:hover { filter: var(--b-hover-filter); }
+      .item-actions button:hover:not(:disabled) { border-color: var(--b-hover-edge); filter: var(--b-hover-filter); }
+    }
+    /* 押している間の見た目。マウスを乗せたときの指定と詳細度が同じなので、必ずその後ろに書く */
     .btn:active:not(:disabled) {
       transform: translateY(3px);
       box-shadow: inset 0 2px 4px var(--shade-900-a18), 0 0 0 var(--b-lip), 0 1px 2px var(--shade-900-a10);
     }
-    .btn:disabled { opacity: .5; cursor: default; box-shadow: inset 0 1px 0 var(--b-hi); }
-    .btn:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
-    @media (hover: hover) {
-      .btn:hover:not(:disabled) {
-        transform: translateY(-1px);
-        border-color: var(--blue);
-        box-shadow: inset 0 1px 0 var(--b-hi), 0 4px 0 var(--b-lip), 0 8px 14px var(--shade-900-a18);
-      }
-      .btn.primary:hover:not(:disabled) { border-color: var(--pri-edge); filter: brightness(1.1); }
-      .btn:active:not(:disabled) {
-        transform: translateY(3px);
-        box-shadow: inset 0 2px 4px var(--shade-900-a18), 0 0 0 var(--b-lip), 0 1px 2px var(--shade-900-a10);
-      }
-      .btn.subtle-danger:hover:not(:disabled) { border-color: var(--rd-edge); filter: brightness(1.08); }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .btn, .item-actions button, .card-del { transition: none; }
-      .btn:hover:not(:disabled), .btn:active:not(:disabled) { transform: none; }
+    .card-del:active { transform: translateY(3px); box-shadow: inset 0 2px 4px var(--black-a25); }
+    .item-actions button:active:not(:disabled) {
+      transform: translateY(2px);
+      box-shadow: inset 0 1px 3px var(--shade-900-a20);
     }
 
+    /* ================================================================
+       お知らせの文字と進捗バー
+       ================================================================ */
     .note {
       margin: 8px 0 0;
       color: var(--sub);
@@ -239,7 +297,6 @@
       background: var(--blue);
       transition: width .15s ease;
     }
-    @media (prefers-reduced-motion: reduce) { .progress-bar { transition: none; } }
 
     /* ================================================================
        画像がないときの案内
@@ -252,7 +309,8 @@
       color: var(--sub);
       text-align: left;
     }
-    body.dragging main {
+    /* 画像ファイルをページの上に持ってきている間 */
+    body.dragging-files main {
       outline: 3px dashed var(--blue);
       outline-offset: 4px;
     }
@@ -337,26 +395,6 @@
       min-width: 0;
     }
     .card-col .card { flex: 1; }
-    .card-del {
-      position: relative;
-      align-self: center;
-      padding: 6px 15px;
-      border: 1px solid var(--rd-edge);
-      border-radius: 8px;
-      background: var(--red);
-      background: linear-gradient(180deg, var(--rd-top), var(--rd-bottom));
-      color: var(--white);
-      text-shadow: 0 1px 1px var(--black-a35);
-      font-size: .85rem;
-      font-weight: 700;
-      cursor: pointer;
-      box-shadow: inset 0 1px 0 var(--rd-hi), 0 3px 0 var(--rd-lip);
-      transition: transform .1s ease, box-shadow .1s ease, filter .12s ease;
-    }
-    .card-del:active { transform: translateY(3px); box-shadow: inset 0 2px 4px var(--black-a25); }
-    @media (hover: hover) {
-      .card-del:hover { filter: brightness(1.08); }
-    }
 
     .card {
       display: flex;
@@ -438,7 +476,8 @@
     .item .name { margin-top: 3px; font-size: .8rem; overflow-wrap: anywhere; }
     .item .meta { color: var(--sub); font-size: .68rem; }
 
-    .thumb { position: relative; cursor: grab; }
+    .thumb { position: relative; }
+    .thumb[draggable="true"] { cursor: grab; }
     .item.dragging { opacity: .35; }
 
     .rank {
@@ -454,7 +493,7 @@
       text-align: center;
     }
 
-    /* Tierのラベル兼、Tierを選ぶボタン。ラベルの色はTier表シートと同じ虹の配色 */
+    /* Tierのラベル兼、Tierを選ぶボタン。設定済みのときの背景色は JS で Tier ごとの虹色にする */
     .tier-ribbon {
       display: block;
       width: 100%;
@@ -478,44 +517,6 @@
       gap: 4px;
       margin-top: 4px;
     }
-    .item-actions button {
-      position: relative;
-      padding: 4px 3px;
-      border: 1px solid var(--btn-edge);
-      border-radius: 6px;
-      background: var(--surface);
-      background: linear-gradient(180deg, var(--btn-top), var(--btn-bottom));
-      color: var(--ink);
-      font-size: .72rem;
-      cursor: pointer;
-      box-shadow: inset 0 1px 0 var(--btn-hi), 0 2px 0 var(--btn-lip);
-      transition: transform .1s ease, box-shadow .1s ease, border-color .12s ease;
-    }
-    .item-actions button:disabled { opacity: .4; cursor: default; box-shadow: inset 0 1px 0 var(--btn-hi); }
-    .item-actions button:active:not(:disabled) {
-      transform: translateY(2px);
-      box-shadow: inset 0 1px 3px var(--shade-900-a20);
-    }
-    @media (hover: hover) {
-      .item-actions button:hover:not(:disabled) { border-color: var(--blue); }
-      .item-actions .danger:hover:not(:disabled) { border-color: var(--rd-edge); filter: brightness(1.08); }
-    }
-    .item-actions .danger {
-      background: var(--red);
-      background: linear-gradient(180deg, var(--rd-top), var(--rd-bottom));
-      border-color: var(--rd-edge);
-      color: var(--white);
-      text-shadow: 0 1px 1px var(--black-a35);
-      box-shadow: inset 0 1px 0 var(--rd-hi), 0 2px 0 var(--rd-lip);
-    }
-    .item-actions .move   { font-weight: 700; }
-    .item-actions .lock.active {
-      background: linear-gradient(180deg, var(--gold-300), var(--gold-500));
-      border-color: var(--gold-700);
-      color: var(--white);
-      text-shadow: 0 1px 1px var(--black-a30);
-      box-shadow: inset 0 1px 0 var(--white-a40), 0 2px 0 var(--gold-800);
-    }
 
     /* 文字の途中で折り返さず、この塊の境目でだけ折り返す（狭い画面で2行になるときの区切り位置を決める） */
     .chunk { display: inline-block; }
@@ -534,10 +535,6 @@
       .vs span { font-size: 42px; }
       .arena-actions { grid-template-columns: 1fr; justify-items: center; }
       .arena-actions #undoBtn, .arena-actions #powerBtn { justify-self: center; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .card { transition: none; }
-      .card:active { transform: none; }
     }
 
     /* ================================================================
@@ -563,10 +560,9 @@
       transition: opacity .25s ease, transform .25s ease;
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-    @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
 
     /* ================================================================
-       2回押しの確認は、ボタンの文字を書き換えず、上に浮かぶ吹き出しで示す
+       2回押しの確認は、ボタンの文字を書き換えず、下に浮かぶ吹き出しで示す
        （文字を書き換えるとボタンの幅が変わってしまうため）
        ================================================================ */
     .confirm-tip {
@@ -599,26 +595,41 @@
     }
 
     /* ================================================================
-       サンプルの件数とリサイズの比率を選ぶメニュー
+       吹き出しメニュー
+       .picker-menu  ツールバーのボタン（サンプル・リサイズ）の真下に出るもの
+       .tier-menu    Tierのリボンや「Tier追加」を押した位置に合わせて JS で動かすもの
        ================================================================ */
     .picker { position: relative; display: inline-block; }
     .picker[hidden] { display: none; }
+
+    .popup {
+      z-index: 50;
+      border: 2px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface);
+    }
+    .popup[hidden] { display: none; }
     .picker-menu {
       position: absolute;
       top: calc(100% + 6px);
       left: 0;
-      z-index: 50;
       min-width: 160px;
       padding: 10px;
-      border: 2px solid var(--line);
-      border-radius: 10px;
-      background: var(--surface);
       box-shadow: 0 8px 24px var(--black-a18);
     }
-    .picker-menu[hidden] { display: none; }
+    .tier-menu {
+      position: fixed;
+      z-index: 60;
+      max-height: 60vh;
+      overflow-y: auto;
+      min-width: 140px;
+      padding: 8px;
+      box-shadow: 0 8px 24px var(--black-a25);
+    }
     .picker-menu-note { margin: 0 0 8px; color: var(--red); font-size: .82rem; }
-    .picker-menu-options { display: flex; flex-direction: column; gap: 6px; }
-    .picker-menu-options button {
+
+    .menu-options { display: flex; flex-direction: column; gap: 6px; }
+    .menu-options button {
       padding: 7px 10px;
       border: 2px solid var(--line);
       border-radius: 8px;
@@ -629,39 +640,13 @@
       text-align: left;
       cursor: pointer;
     }
-    .picker-menu-options button:hover { border-color: var(--blue); }
-
-    /* Tierを選ぶ共通の吹き出し。クリックされたリボン/ボタンの位置に合わせて動かす */
-    .tier-menu {
-      position: fixed;
-      z-index: 60;
-      max-height: 60vh;
-      overflow-y: auto;
-      min-width: 140px;
-      padding: 8px;
-      border: 2px solid var(--line);
-      border-radius: 10px;
-      background: var(--surface);
-      box-shadow: 0 8px 24px var(--black-a25);
-    }
-    .tier-menu[hidden] { display: none; }
-    .tier-menu-options { display: flex; flex-direction: column; gap: 4px; }
-    .tier-menu-options button {
-      padding: 6px 10px;
-      border: 2px solid var(--line);
-      border-radius: 8px;
-      background: var(--bg);
-      color: var(--ink);
-      font: inherit;
-      font-size: .85rem;
-      text-align: left;
-      cursor: pointer;
-    }
-    .tier-menu-options button:hover { border-color: var(--blue); }
-    .tier-menu-options button.current { border-color: var(--blue); font-weight: 700; }
+    .menu-options button:hover { border-color: var(--blue); }
+    .menu-options button.current { border-color: var(--blue); font-weight: 700; }
+    .tier-menu .menu-options { gap: 4px; }
+    .tier-menu .menu-options button { padding: 6px 10px; font-size: .85rem; }
 
     /* ================================================================
-       使い方（ヘルプ）
+       ダイアログ（使い方、Tier名の入力、Tier番号の抜けの確認）
        ================================================================ */
     .modal-overlay {
       position: fixed;
@@ -726,7 +711,7 @@
       font-size: .85em;
     }
 
-    .tier-name-choice { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+    .modal-choice { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
     .tier-name-row {
       display: flex;
       align-items: center;
@@ -738,16 +723,15 @@
       font-weight: 700;
       font-size: .9rem;
     }
-    .tier-name-row input {
-      flex: 1;
-      padding: 6px 10px;
-      border: 2px solid var(--line);
-      border-radius: 8px;
-      background: var(--surface);
-      color: var(--ink);
-      font: inherit;
+    .tier-name-row .text-input { flex: 1; }
+
+    /* ================================================================
+       動きを減らす設定の端末では、アニメーションを止める
+       ================================================================ */
+    @media (prefers-reduced-motion: reduce) {
+      .btn, .card-del, .item-actions button, .card, .progress-bar, .toast { transition: none; }
+      .btn:hover:not(:disabled), .btn:active:not(:disabled), .card:active { transform: none; }
     }
-    .tier-name-row input:focus-visible { outline: 3px solid var(--blue); outline-offset: 1px; }
   </style>
 </head>
 
@@ -760,16 +744,16 @@
       <button class="btn" id="helpBtn">使い方</button>
     </div>
     <div class="title-row">
-      <input type="text" id="titleInput" aria-label="タイトル" placeholder="例：好きな漫画" maxlength="40">
+      <input type="text" class="text-input" id="titleInput" aria-label="タイトル" placeholder="例：好きな漫画" maxlength="40">
       <span class="title-suffix">ランキング</span>
     </div>
     <div class="toolbar">
       <div class="tool-group">
-        <button class="btn primary" id="addBtn">画像を追加</button>
+        <button class="btn tone-primary" id="addBtn">画像を追加</button>
         <span class="picker" id="resizePicker">
           <button class="btn" id="resizeBtn">リサイズ</button>
-          <div class="picker-menu" id="resizeMenu" hidden>
-            <div class="picker-menu-options" id="resizeMenuOptions"></div>
+          <div class="popup picker-menu" id="resizeMenu" hidden>
+            <div class="menu-options" id="resizeMenuOptions"></div>
           </div>
         </span>
       </div>
@@ -778,9 +762,9 @@
         <button class="btn" id="importBtn">読み込み</button>
         <span class="picker" id="samplePicker" hidden>
           <button class="btn" id="sampleBtn">サンプル</button>
-          <div class="picker-menu" id="sampleMenu" hidden>
+          <div class="popup picker-menu" id="sampleMenu" hidden>
             <p class="picker-menu-note" id="sampleMenuNote" hidden>今のデータは消えます</p>
-            <div class="picker-menu-options" id="sampleMenuOptions"></div>
+            <div class="menu-options" id="sampleMenuOptions"></div>
           </div>
         </span>
       </div>
@@ -788,9 +772,9 @@
         <button class="btn" id="sheetBtn">シート作成</button>
         <button class="btn" id="nameBtn">名前を表示</button>
       </div>
-      <div class="tool-group end">
-        <button class="btn subtle-danger" id="resetAllRatingsBtn">全初期化</button>
-        <button class="btn subtle-danger" id="resetBtn">すべて削除</button>
+      <div class="tool-group">
+        <button class="btn tone-danger" id="resetAllRatingsBtn">全初期化</button>
+        <button class="btn tone-danger" id="deleteAllBtn">すべて削除</button>
       </div>
     </div>
   </header>
@@ -805,7 +789,7 @@
 
   <div class="empty" id="empty" hidden>
     画像を選ぶか、ここにドラッグ＆ドロップすると二択が始まります。<br>
-    新しい画像はまず4回の配置比較で大まかな位置を決め、その後はレートで順位が変わっていきます。
+    新しい画像はまず<span data-fill="placementCount"></span>回の配置比較で大まかな位置を決め、その後はレートで順位が変わっていきます。
   </div>
 
   <section class="arena" id="arena" hidden>
@@ -820,7 +804,7 @@
           <span class="name"></span>
           <span class="power"></span>
         </button>
-        <button class="card-del" id="leftDeleteBtn" hidden>削除</button>
+        <button class="card-del tone-danger" id="leftDeleteBtn" hidden>削除</button>
       </div>
       <div class="vs" role="img" aria-label="VS"><span class="v" aria-hidden="true">V</span><span class="s" aria-hidden="true">S</span></div>
       <div class="card-col">
@@ -829,7 +813,7 @@
           <span class="name"></span>
           <span class="power"></span>
         </button>
-        <button class="card-del" id="rightDeleteBtn" hidden>削除</button>
+        <button class="card-del tone-danger" id="rightDeleteBtn" hidden>削除</button>
       </div>
     </div>
 
@@ -852,33 +836,33 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-  <div class="tier-menu" id="tierMenu" hidden>
-    <div class="tier-menu-options" id="tierMenuOptions"></div>
+  <div class="popup tier-menu" id="tierMenu" hidden>
+    <div class="menu-options" id="tierMenuOptions"></div>
   </div>
 
-  <div class="tier-menu" id="tierAddMenu" hidden>
-    <div class="tier-menu-options" id="tierAddMenuOptions"></div>
+  <div class="popup tier-menu" id="tierAddMenu" hidden>
+    <div class="menu-options" id="tierAddMenuOptions"></div>
   </div>
 
   <div class="modal-overlay" id="tierNameOverlay" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tierNameTitle">
       <div class="modal-head">
         <h2 id="tierNameTitle">Tierに名前をつけますか？</h2>
-        <button class="modal-close" id="tierNameClose" aria-label="閉じる">×</button>
+        <button class="modal-close" aria-label="閉じる">×</button>
       </div>
       <div class="modal-body">
         <div id="tierNameQuestion">
           <p>シートの見出しを「Tier 1」のままにするか、それぞれに名前を付けるか選べます。</p>
-          <div class="tier-name-choice">
+          <div class="modal-choice">
             <button class="btn" id="tierNameSkip">つけない</button>
-            <button class="btn primary" id="tierNameYes">名前をつける</button>
+            <button class="btn tone-primary" id="tierNameYes">名前をつける</button>
           </div>
         </div>
         <div id="tierNameForm" hidden>
           <div id="tierNameInputs"></div>
-          <div class="tier-name-choice">
+          <div class="modal-choice">
             <button class="btn" id="tierNameBack">戻る</button>
-            <button class="btn primary" id="tierNameGo">シートを作成</button>
+            <button class="btn tone-primary" id="tierNameGo">シートを作成</button>
           </div>
         </div>
       </div>
@@ -889,13 +873,13 @@
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tierGapTitle">
       <div class="modal-head">
         <h2 id="tierGapTitle">Tierの番号に抜けがあります</h2>
-        <button class="modal-close" id="tierGapClose" aria-label="閉じる">×</button>
+        <button class="modal-close" aria-label="閉じる">×</button>
       </div>
       <div class="modal-body">
         <p>使われていないTierの番号があります。自動的に詰めてからシートを作成しますか？</p>
-        <div class="tier-name-choice">
+        <div class="modal-choice">
           <button class="btn" id="tierGapCancel">キャンセル</button>
-          <button class="btn primary" id="tierGapOk">詰めて作成</button>
+          <button class="btn tone-primary" id="tierGapOk">詰めて作成</button>
         </div>
       </div>
     </div>
@@ -905,48 +889,48 @@
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
       <div class="modal-head">
         <h2 id="helpTitle">使い方</h2>
-        <button class="modal-close" id="helpClose" aria-label="閉じる">×</button>
+        <button class="modal-close" aria-label="閉じる">×</button>
       </div>
       <div class="modal-body">
 
         <h3>画像を追加する</h3>
-        <p>「画像を追加」から選ぶか、ページに画像をドラッグ＆ドロップすると追加できます。</p>
+        <p>「画像を追加」から選ぶか、ページに画像をドラッグ＆ドロップすると追加できます。すでに追加されている画像と同じものは追加されません。</p>
 
         <h3>リサイズ</h3>
-        <p>「リサイズ」で、画像を保存するときの縦横比を4:3（既定）・1:1・3:4から選べます。</p>
+        <p>「リサイズ」で、画像を保存するときの縦横比（横:縦）を<span data-fill="aspectChoices"></span>から選べます。既定は<span data-fill="aspectDefault"></span>です。画像は追加するときにこの比率で中央を切り抜いて保存されるため、画像が1枚でもあるあいだは変更できません。</p>
 
         <h3>二択で比較する</h3>
         <p>好きなほう、強いほうなど上位だと思う方を押して選びます。キーボードでも操作できます。</p>
         <ul>
           <li><kbd>←</kbd> / <kbd>→</kbd>：左または右を選ぶ</li>
           <li><kbd>↓</kbd>：同じくらい（両方に半分ずつ点を入れる）</li>
-          <li><kbd>Z</kbd>：ひとつ前の回答を取り消す（Undoボタンと同じ）</li>
+          <li><kbd>Z</kbd>：ひとつ前の操作を取り消す（Undoボタンと同じ）</li>
         </ul>
-        <p>比較のたびに、双方の「強さ」が動きます。</p>
+        <p>比較のたびに、双方の「強さ」が動きます。新しい画像は、まず<span data-fill="placementCount"></span>回の配置比較で大まかな位置を決めます。</p>
 
-        <h3>順位を手動で入れ替える</h3>
-        <p>画像の枠をつかんでドラッグすると、離した位置まで順位を動かせます。一覧の「←」「→」ボタンでは、隣の順位の画像とちょうど1つだけ入れ替えられます。</p>
+        <h3>順位を手動で動かす</h3>
+        <p>一覧の画像をつかんでドラッグすると、離した位置まで順位を動かせます。一覧の「←」「→」ボタンでは、1つ上または1つ下の順位へ動かせます。Tierの違う画像を越えて動かすことと、ロック中の画像を動かすことはできません。</p>
 
         <h3>Tier</h3>
-        <p>一覧の各画像の上にあるリボンで、Tierを設定できます。Tierは1から始まり、番号が小さいほうが上位になります。ツールバーの「Tier追加」から、好きな位置に新しいTierの枠を挿入できます。順位一覧の下にある「Tierを詰める」を押すと、使われていない番号を取り除いて、実際に使われている番号だけで1から並べ直します。</p>
+        <p>一覧の各画像の上にあるリボンで、Tierを設定できます。Tierは1から始まり、番号が小さいほうが上位になります。順位一覧の下にある「Tier追加」から、好きな位置に新しいTierの枠を挿入できます。「Tierを詰める」を押すと、使われていない番号を取り除いて、実際に使われている番号だけで1から並べ直します。「Tier初期化」を押すと、すべての画像のTierが未定に戻ります。</p>
 
         <h3>ロック</h3>
-        <p>一覧の「ロック」ボタンで、まとめてロック・解除ができます。</p>
+        <p>一覧の「ロック」を押すと、その画像から近いほうの端（一番上か一番下）までの画像をまとめて固定します。ロック中の画像は比較に出なくなり、順位やTierの変更、削除もできなくなります。「解除」を押すと、ロックされた範囲の内側の端からその画像までのロックを外します。ロック中の画像が1枚でもあるあいだは、「Tier追加」「Tierを詰める」「Tier初期化」は使えません。</p>
 
-        <h3>画像の全初期化・削除</h3>
-        <p>「全初期化」は、画像はすべて残したまま、全員のレート・比較の記録・Tierが消えます。「削除」は画像ごと消します。</p>
+        <h3>全初期化・すべて削除</h3>
+        <p>「全初期化」は、画像はすべて残したまま、全員のレート・比較の記録・Tier・ロックを消します。「すべて削除」は画像ごとすべて消します。</p>
 
         <h3>タイトル</h3>
         <p>見出しの下の欄に好きな言葉を入れると、「○○ランキング」という名前がこのランキングに付きます。空欄のままでも構いません。</p>
 
         <h3>保存・読み込み</h3>
-        <p>「保存」で、画像と順位をまとめて1つのファイルに書き出せます。「読み込み」でそのファイルから復元できます。</p>
+        <p>「保存」で、画像と順位をまとめて1つのファイルに書き出せます。「読み込み」でそのファイルから復元できます。読み込むと、今のデータは上書きされます。</p>
 
         <h3>サンプル</h3>
-        <p>押すと20枚・50枚・100枚の代表的な漫画の画像を選べます。</p>
+        <p>押すと<span data-fill="sampleCounts"></span>の代表的な漫画の画像を選べます。読み込むと、今のデータは消えます。</p>
 
         <h3>Tier表シートの書き出し</h3>
-        <p>Tierを1つも設定していない場合は、現在の順位を10位ごとに区切り、「Top10」「Top20」のような見出しで出力します。Tierが1つ以上ある場合は、先に「Tier 1」のままにするか、それぞれに名前を付けるかを聞かれます。名前を付けた場合、行の見出しはその名前になります。空欄のままにした番号は「Tier N」のままです。</p>
+        <p>Tierを1つも設定していない場合は、現在の順位を<span data-fill="sheetCols"></span>位ごとに区切り、「Top<span data-fill="sheetCols"></span>」「Top<span data-fill="sheetCols2"></span>」のような見出しで出力します。Tierが1つ以上ある場合は、先に「Tier 1」のままにするか、それぞれに名前を付けるかを聞かれます。名前を付けた場合、行の見出しはその名前になります。空欄のままにした番号は「Tier N」のままです。Tierの番号に抜けがある場合は、先に番号を詰めるかどうかを聞かれます。</p>
 
         <h3>名前の表示</h3>
         <p>初めは画像のファイル名が隠れています。「名前を表示」で、比較画面と一覧の両方にファイル名を表示でき、「名前を隠す」で再び隠せます。</p>
@@ -962,96 +946,158 @@
 
 <script>
 /* ==================================================================
+   二択式ランキングメーカー
+
+   画像を2枚ずつ見比べて好きなほうを選び続けると、その結果から各画像の
+   「レート」（強さを表す数値）を計算して順位を作るツール。
+
+   データの持ち方
+   ・保存するデータはすべて state に入れ、ブラウザ内（IndexedDB）に保存する。
+     画像そのもの（Blob）だけは別の保存場所に置き、state には持たない
+   ・state を書き換える操作は、最後に必ず commit() を呼ぶ。
+     commit() は「レートを順位どおりに整える → 保存する → 画面を描き直す」を順に行う
+
+   順位の決まり（このツールの中心となる約束）
+   ・順位は次の優先順で決まる（canonicalOrder）
+       1. ロックした画像は、ロックした端（一番上か一番下）に固定される
+       2. Tierを設定した画像は、Tier番号の小さいものほど上に来る
+       3. それ以外はレートの高い順
+   ・保存の直前に、レートがこの順位どおりに上から下へ減っていくよう整える（normalizeRatings）。
+     そのため、レートの大小と順位はいつも一致する。手動で順位を動かすときは、
+     動かす画像のレートを、移動先の上下2枚の中間の値にするだけでよい
+   ================================================================== */
+
+/* ==================================================================
    設定値
    ================================================================== */
-const RATING_START   = 1500;  // 最初の画像のレート
-const RD_START       = 350;   // 新しい画像の信頼幅（最大値）
-const RD_MIN         = 50;    // 信頼幅の下限
-const RD_GROWTH      = 25;    // 比較されない間に信頼幅が広がる速さ
-const RATING_JITTER  = 0.01;  // 複数の画像に同時に同じレートを与えるとき、手動での並べ替えができるように見分けをつける程度のばらつき
-const PLACEMENT_N    = 4;     // 新しい画像の配置比較の回数（表示や強さの公開はここまで）
-const PLACEMENT_WIDE_N = 7;   // 幅広い相手と当てる期間（表示には出さず、内部の挙動だけ長く続ける）
-const HISTORY_MAX    = 300;   // Undo で戻れる回数
-const RECENT_KEYS_MAX = 10;   // 同じ組み合わせを避けておく直近の回数
-const TIER_MAX_DEFAULT = 5;   // Tierの箱数の初期値・下限
-const TIER_MAX_CAP     = 20;  // Tierの箱数の上限
-const RATING_STEP      = 40;  // ドラッグで一覧の一番上か一番下に置いたときの、隣とのレートの差
-const RATING_MIN_GAP   = 0.01; // 並び順に沿ってレートを整えるとき、隣り合う順位どうしに最低限つける差
+// レート計算（Glicko 方式）
+const RATING_START     = 1500;  // 最初の画像のレート
+const DEVIATION_START  = 350;   // 新しい画像の信頼幅（最大値）。信頼幅はレートの不確かさで、大きいほど1回の比較でレートが大きく動く
+const DEVIATION_MIN    = 50;    // 信頼幅の下限
+const DEVIATION_GROWTH = 25;    // 比較されない間に信頼幅が広がる速さ
+// 新しい画像の扱い
+const PLACEMENT_N      = 4;     // 配置比較の回数。この回数を終えるまでは強さを表示しない
+const WIDE_MATCH_N     = 7;     // 予想勝率の幅広い相手と当てる回数（配置比較の回数を含む。画面には出さない）
+// 出題
+const RECENT_PAIRS_MAX = 10;    // 同じ組み合わせを避けておく、直近の出題の数
+const WIDE_WIN_LOW     = 0.2;   // 幅広い相手：予想勝率20〜80%
+const WIDE_WIN_HIGH    = 0.8;
+const NORMAL_WIN_LOW   = 0.3;   // 通常の相手：予想勝率30〜70%（実力の近い相手）
+const NORMAL_WIN_HIGH  = 0.7;
+const NEAR_OPPONENTS   = 3;     // 予想勝率の範囲に合う相手がいないとき、レートの近い順に候補にする枚数
+// 順位
+const RATING_STEP      = 40;    // 一覧の一番上か一番下へ動かしたときの、隣とのレートの差
+const RATING_MIN_GAP   = 0.01;  // レートを整えるとき、隣り合う順位どうしに最低限つける差
+const HISTORY_MAX      = 300;   // Undo で戻れる回数
+// Tier
+const TIER_COUNT_DEFAULT = 5;   // Tierの箱の数の初期値・下限
+const TIER_COUNT_MAX     = 20;  // Tierの箱の数の上限
+const TIER_NAME_MAX      = 20;  // シート作成時に付けるTier名の最大文字数
+const TIER_HUE_RANGE     = 270; // Tierの虹色：Tier 1 を色相0（赤）、最後のTierを色相270とし、間を均等に割り当てる
+const TIER_SATURATION    = 70;  // 彩度(%)
+const TIER_LIGHTNESS     = 42;  // 明るさ(%)
+// 画像
+const ASPECTS = {               // 保存する画像の縦横比。キーとラベルは「横:縦」、value は 幅 / 高さ
+  "3:4": { label: "3:4（縦長）",   value: 3 / 4 },
+  "1:1": { label: "1:1（正方形）", value: 1 },
+  "4:3": { label: "4:3（横長）",   value: 4 / 3 },
+};
+const ASPECT_DEFAULT   = "3:4";
+const IMAGE_HEIGHT     = 640;   // 保存する画像の高さ(px)。幅は縦横比から決まる
+const JPEG_QUALITY     = 0.88;  // 保存する画像の画質
 // 画面の表示時間（ミリ秒）
-const MESSAGE_MS        = 3000;   // 上部の小さなお知らせが消えるまで
-const TOAST_MS          = 3500;   // 大きなお知らせが消え始めるまで
-const TOAST_FADE_MS     = 250;    // 大きなお知らせが消えていく時間
-const CONFIRM_MS        = 3000;   // 2回押しの確認の吹き出しが消えるまで
-const IMPORT_CONFIRM_MS = 4000;   // 読み込みの上書き確認だけは少し長めに出す
-const DOWNLOAD_URL_MS   = 10000;  // 保存用に作った一時的なURLを片付けるまで
-const SAVE_VERSION      = 3;      // 保存データの形式の版。形式を変えたら上げる
-// 出題で相手を選ぶときの、予想勝率の範囲
-const WIDE_WIN_LOW      = 0.2;    // 配置比較の間は、幅広い相手（勝率20〜80%）と当てる
-const WIDE_WIN_HIGH     = 0.8;
-const NORMAL_WIN_LOW    = 0.3;    // 通常は、実力の近い相手（勝率30〜70%）と当てる
-const NORMAL_WIN_HIGH   = 0.7;
-const NEAR_OPPONENTS    = 3;      // 範囲に合う相手がいないとき、レートの近い順に候補にする枚数
+const MESSAGE_MS        = 3000;  // 上部の小さなお知らせが消えるまで
+const TOAST_MS          = 3500;  // 大きなお知らせが消え始めるまで
+const TOAST_FADE_MS     = 250;   // 大きなお知らせが消えていく時間
+const CONFIRM_MS        = 3000;  // 2回押しの確認の吹き出しが消えるまで
+const IMPORT_CONFIRM_MS = 4000;  // 読み込みの上書き確認だけは少し長めに出す
+const DOWNLOAD_URL_MS   = 10000; // ダウンロード用に作った一時的なURLを片付けるまで
 // 吹き出し（Tierメニューなど）の位置
-const MENU_GAP          = 4;      // 押したボタンとの隙間(px)
-const MENU_MARGIN       = 8;      // 画面の端から離す幅(px)
-// Tierの虹色。Tier1を色相0（赤）とし、最後のTierが色相 TIER_HUE_RANGE になるよう均等に割り当てる
-const TIER_HUE_RANGE    = 270;
-const TIER_SATURATION   = 70;     // 彩度(%)
-const TIER_LIGHTNESS    = 42;     // 明るさ(%)
-const TIER_NAME_MAX     = 20;     // シート作成時に付けるTier名の最大文字数
-const JPEG_QUALITY      = 0.88;   // 縮小して保存する画像の画質
-// 旧版データの移行
-const MIGRATE_ITERATIONS = 300;   // 強さを推定する計算の繰り返し回数
-const MIGRATE_RD         = 200;   // 移行した画像の信頼幅
-// 保存する画像の縦横比（幅 / 高さ）。ラベルは「縦:横」の言い方に合わせている
-const RESIZE_RATIOS  = { "4:3": 3 / 4, "1:1": 1, "3:4": 4 / 3 };
-const RESIZE_DEFAULT = "4:3";
-const IMAGE_HEIGHT   = 640;   // 保存する画像の高さ(px)。幅はここで選んだ比率から決まる
-const SAMPLE_DIR     = "samples/";  // サンプル画像のフォルダ。中の samples.json に一覧を書く
+const MENU_GAP          = 4;     // 押したボタンとの隙間(px)
+const MENU_MARGIN       = 8;     // 画面の端から離す幅(px)
+// Tier表シート（PNG画像）
+const SHEET_COLS        = 10;    // 1行に並べる画像の数
+const SHEET_CELL_W      = 140;   // 1マスの幅(px)。高さは縦横比から決まる
+const SHEET_LABEL_W     = 110;   // 左の見出しの幅(px)
+const SHEET_TITLE_H     = 64;    // タイトルの帯の高さ(px)
+const SHEET_TITLE_PAD   = 20;    // タイトル文字の左の余白(px)
+const SHEET_FONT        = "'Zen Kaku Gothic New', sans-serif";
+const SHEET_TITLE_SIZE  = 32;    // 文字の大きさ(px)：タイトル
+const SHEET_LABEL_SIZE  = 26;    //                  ：行の見出し
+const SHEET_RANK_SIZE   = 13;    //                  ：画像の左上の順位番号
+const SHEET_RANK_BOX_W  = 30;    // 順位番号の下に敷く黒い四角の幅(px)
+const SHEET_RANK_BOX_H  = 22;    //                         高さ(px)
+const SHEET_RANK_BOX_ALPHA = 0.65; //                       黒の濃さ
+const SHEET_RANK_TEXT_X = 6;     // 四角の左上から見た、番号の書き出し位置(px)
+const SHEET_RANK_TEXT_Y = 16;
+// サンプル
+const SAMPLE_DIR        = "samples/";    // サンプル画像のフォルダ。中の samples.json に一覧を書く
+const SAMPLE_COUNTS     = [20, 50, 100]; // サンプルの枚数の選択肢
+// 保存
+const DB_NAME           = "duel-tier";   // ブラウザ内の保存場所の名前
+const APP_ID            = "duel-tier";   // 保存ファイルがこのツールのものかを見分ける印
+const SAVE_VERSION      = 4;             // 保存データの形式の版。形式を変えたら上げる
+const PAGE_TITLE        = "二択式ランキングメーカー";
 
 /* ==================================================================
    状態
-   ratings[id] = { r: レート, rd: 信頼幅, n: 比較回数,
-                   p: 残りの配置比較回数（表示に出す分）, w: 幅広い相手と当てる残り回数（内部だけの分）,
-                   tier: Tier番号（未定なら null）, locked: ロック中か,
-                   lockZone: ロックした端（"top" か "bottom"、ロックしていなければ null か無し）,
-                   last: 最後に比較した時点 }
-   names[id]  : 画像の名前（元のファイル名）
-   hashes[id] : 画像の中身のハッシュ（同じ画像の重複追加を見分ける）
-   t       : これまでの比較の総数（時間の代わりに使う）
-   hist    : Undo 用の履歴 { a, b, res, before }。type: "swap" は手動の入れ替えとドラッグ
-             （ドラッグは1枚だけ動かすので、a と b が同じ画像になる）
-   tierMax : 今用意しているTierの箱の数（5〜20）
-   title / resizeRatio : タイトル欄の文字と、新しく追加する画像の縦横比
+   state（保存されるデータ）
+     version     : 保存データの形式の版（SAVE_VERSION）
+     title       : タイトル欄の文字（「○○ランキング」の○○）
+     aspect      : 画像の縦横比（ASPECTS のキー）
+     tierCount   : 今用意しているTierの箱の数（TIER_COUNT_DEFAULT〜TIER_COUNT_MAX）
+     comparisons : これまでの比較の総数。時間の代わりに使う
+     history     : Undo 用の履歴（新しいものが末尾）
+                     { type: "duel", a, b, before } 二択の回答。a, b は比べた2枚の id
+                     { type: "move", before }       手動での順位の移動
+                   before は、操作の直前の各画像のレートの記録 { id: snapshot } （RATING_FIELDS の項目）
+     images[id]  : 画像1枚分の記録
+                     name            : 画像の名前（元のファイル名から拡張子を除いたもの）
+                     hash            : 画像の中身のハッシュ。同じ画像の重複追加を見分ける
+                     rating          : レート
+                     deviation       : 信頼幅
+                     comparisons     : この画像が比較された回数
+                     placementLeft   : 残りの配置比較の回数
+                     wideMatchesLeft : 幅広い相手と当てる残りの回数
+                     lastComparedAt  : 最後に比較されたときの state.comparisons
+                     tier            : Tier番号（1以上）。未定なら null
+                     lock            : ロックした端 "top" か "bottom"。ロックしていなければ null
    ================================================================== */
-const emptyState = () => ({ version: SAVE_VERSION, names: {}, ratings: {}, hashes: {}, t: 0, hist: [], title: "", resizeRatio: RESIZE_DEFAULT, tierMax: TIER_MAX_DEFAULT });
+const emptyState = () => ({
+  version: SAVE_VERSION, title: "", aspect: ASPECT_DEFAULT, tierCount: TIER_COUNT_DEFAULT,
+  comparisons: 0, history: [], images: {},
+});
 
-// 同じレートが並ばないよう、ごく小さなばらつきを足す
-const jitteredRating = base => base + (Math.random() - 0.5) * RATING_JITTER;
+// Undo で元に戻す項目（レートに関わるもの）。Tierとロックは Undo の対象外
+const RATING_FIELDS = ["rating", "deviation", "comparisons", "placementLeft", "wideMatchesLeft", "lastComparedAt"];
 
-/* 画像1枚分のレートの記録を作る。r は元になるレートで、同じ値が並ばないよう少しだけばらつかせる。
-   指定しなかった項目は、新しく追加した画像と同じ値になる */
-function newRating(r, { rd = RD_START, n = 0, p = PLACEMENT_N, w = PLACEMENT_WIDE_N, last = state.t } = {}) {
-  return { r: jitteredRating(r), rd, n, p, w, tier: null, locked: false, last };
-}
+let state       = emptyState();
+let pair        = null;    // 比較画面に出している2枚の id [左, 右]。出せる組がなければ null
+let recentPairs = [];      // 直近に出題した組み合わせ（pairKey）。同じ組が短期間で続かないようにする
+let showPower   = true;    // 比較画面に強さを表示するか
+let showNames   = false;   // 比較画面と一覧に名前を表示するか
+let storageOK   = true;    // ブラウザ内への保存ができているか
+let message     = "";      // 上部の小さなお知らせ
+const imageUrls = {};      // id → 画像を表示するための URL
 
-let state     = emptyState();
-let pair      = null;   // いま表示している2枚 [左, 右]
-let recentKeys = [];    // 直近に出題した組み合わせ（同じ組が短期間で続かないように）
-const wasRecentlyPaired = (a, b) => recentKeys.includes(pairKey(a, b));
-let showPower = true;   // 比較画面に強さを表示するか
-let showNames = false;  // 比較画面・一覧に名前を表示するか（既定は隠した状態。ボタンで表示できる）
-let storageOK = true;
-const urls    = {};     // 画像id → 表示用URL
-
+/* ==================================================================
+   小さな道具
+   ================================================================== */
 const $ = id => document.getElementById(id);
-const allIds = () => Object.keys(state.ratings);
+const ids = () => Object.keys(state.images);
+const ratingOf = id => state.images[id].rating;
 const pickRandom = list => list[Math.floor(Math.random() * list.length)];
 const pairKey = (a, b) => (a < b ? a + "|" + b : b + "|" + a);
 const newId = () => "i" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const mean = list => (list.length ? list.reduce((s, x) => s + x, 0) / list.length : RATING_START);
+const uniqueSorted = list => [...new Set(list)].sort((a, b) => a - b);
+const stripExtension = filename => filename.replace(/\.[^.]+$/, "");
 
-/* 色は、CSSの :root に書いたカラーパレット（--white や --ash-500 など）から名前で読む。
+// 「○○ランキング」。タイトルが空なら空文字
+const rankingTitle = () => (state.title.trim() ? `${state.title.trim()}ランキング` : "");
+const updateDocumentTitle = () => { document.title = rankingTitle() || PAGE_TITLE; };
+
+/* 色は、CSS の :root に書いたカラーパレット（--white や --ash-500 など）から名前で読む。
    canvas に描くシート画像の色も、ここを通して同じパレットから指定する */
 const pal = name => getComputedStyle(document.documentElement).getPropertyValue(`--${name}`).trim();
 const palAlpha = (name, alpha) => {
@@ -1059,219 +1105,174 @@ const palAlpha = (name, alpha) => {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 };
 
+// 指定した画像のレートの記録を写し取る（Undo 用）
+function snapshot(idList) {
+  const out = {};
+  for (const id of idList) {
+    out[id] = {};
+    for (const f of RATING_FIELDS) out[id][f] = state.images[id][f];
+  }
+  return out;
+}
+
 /* ==================================================================
-   Tier
-   各画像に付ける1以上の番号（未定は null）。番号が小さいほど上位で、
-   異なるTier同士は比較にも順位の入れ替えにも使わない
+   レート計算（Glicko 方式）
+   式の中の 400 と 10 は「レートの差が400で、勝つ見込みが10倍」というレートの物差し、
+   3 は Glicko の式の定数
    ================================================================== */
-const getTier = id => (state.ratings[id] ? state.ratings[id].tier : null); // null = 未定
-const maxTier = () => allIds().reduce((m, id) => Math.max(m, getTier(id) || 0), 0);
-// 個別画像のTierメニューで選べる番号の上限。tierMaxまでは常に選べ、
-// 一番上の箱（tierMax）が実際に使われていれば、その1つ上まで選べるようになる
-const tierCeiling = () => (maxTier() === state.tierMax && state.tierMax < TIER_MAX_CAP) ? state.tierMax + 1 : state.tierMax;
-// 片方が未定、または同じTierなら比較できる。Tierが違えば比較できない
-const tierCompatible = (a, b) => {
-  const ta = getTier(a), tb = getTier(b);
-  return ta === null || tb === null || ta === tb;
-};
-// Tier表シートの行の色と同じ虹の配色。tierNum は1始まり、maxT は今の最大Tier
-const tierColor = (tierNum, maxT) => `hsl(${maxT > 1 ? ((tierNum - 1) / (maxT - 1)) * TIER_HUE_RANGE : 0}, ${TIER_SATURATION}%, ${TIER_LIGHTNESS}%)`;
+const GLICKO_Q = Math.LN10 / 400;
 
-/* Tierの数字の欠番を、実際に使われている番号だけを取り出して1から詰め直す。
-   自動では呼ばれず、「Tierを詰める」ボタンとシート作成時の警告からのみ呼ばれる */
-function compactTiers() {
-  if (!canEditTierBoxes()) return;
-  const used = [...new Set(allIds().map(id => state.ratings[id].tier).filter(t => t !== null))].sort((a, b) => a - b);
-  const remap = {};
-  used.forEach((old, i) => { remap[old] = i + 1; });
-  for (const id of allIds()) {
-    const t = state.ratings[id].tier;
-    if (t !== null) state.ratings[id].tier = remap[t];
+/* 新しい画像のレートの記録。needsPlacement が true なら配置比較から始める */
+function freshRating(rating, needsPlacement) {
+  return {
+    rating,
+    deviation: DEVIATION_START,
+    comparisons: 0,
+    placementLeft: needsPlacement ? PLACEMENT_N : 0,
+    wideMatchesLeft: needsPlacement ? WIDE_MATCH_N : 0,
+    lastComparedAt: state.comparisons,
+  };
+}
+
+/* しばらく比較されていない画像は信頼幅が広がる。
+   1期間 = 各画像が平均して1回比較されるまでの比較数 */
+function currentDeviation(image) {
+  const period  = Math.max(1, ids().length / 2);
+  const elapsed = (state.comparisons - image.lastComparedAt) / period;
+  return Math.min(DEVIATION_START, Math.sqrt(image.deviation ** 2 + DEVIATION_GROWTH ** 2 * elapsed));
+}
+
+/* 相手の信頼幅が大きいほど、その相手との結果を割り引いて扱うための係数（0〜1） */
+const opponentWeight = deviation => 1 / Math.sqrt(1 + 3 * GLICKO_Q ** 2 * deviation ** 2 / Math.PI ** 2);
+
+/* レート ra の側がレート rb の相手に勝つ予想確率（信頼幅は考えない）。
+   出題の相手選びと、画面に出す「強さ」に使う */
+const expectedWin = (ra, rb) => 1 / (1 + Math.pow(10, -(ra - rb) / 400));
+
+/* 1回分の結果でレートを更新する。scoreA は a から見た得点（勝ち1、引き分け0.5、負け0） */
+function applyResult(a, b, scoreA) {
+  const A = state.images[a], B = state.images[b];
+  const devA = currentDeviation(A), devB = currentDeviation(B);
+
+  const updateOne = (r, dev, rOpp, devOpp, score) => {
+    const g = opponentWeight(devOpp);
+    const E = 1 / (1 + Math.pow(10, -g * (r - rOpp) / 400));
+    const d2 = 1 / (GLICKO_Q ** 2 * g * g * E * (1 - E));
+    const denom = 1 / (dev * dev) + 1 / d2;
+    return { rating: r + (GLICKO_Q / denom) * g * (score - E), deviation: Math.max(DEVIATION_MIN, Math.sqrt(1 / denom)) };
+  };
+
+  const nextA = updateOne(A.rating, devA, B.rating, devB, scoreA);
+  const nextB = updateOne(B.rating, devB, A.rating, devA, 1 - scoreA);
+
+  state.comparisons++;
+  for (const [image, next] of [[A, nextA], [B, nextB]]) {
+    image.rating = next.rating;
+    image.deviation = next.deviation;
+    image.comparisons++;
+    image.lastComparedAt = state.comparisons;
+    if (image.placementLeft > 0) image.placementLeft--;
+    if (image.wideMatchesLeft > 0) image.wideMatchesLeft--;
   }
-  state.tierMax = Math.max(TIER_MAX_DEFAULT, used.length);
-}
-
-/* その画像に設定できるTier番号の範囲 { min, max }。ロック中の画像はTierを変えられないので null。
-   ロックしていない画像は、上端にロックした画像のTierより上位にも、下端にロックした画像のTierより
-   下位にもできない。これを許すと、ロックを解除したときにTierの決まりで順位が動いてしまうため */
-function allowedTierRange(id) {
-  if (!canEdit(id)) return null;
-  let min = 1, max = Infinity;
-  for (const x of allIds()) {
-    const t = getTier(x);
-    if (t === null || !isLocked(x)) continue;
-    if (lockRank(x) < 0) min = Math.max(min, t);
-    if (lockRank(x) > 0) max = Math.min(max, t);
-  }
-  return { min, max };
-}
-
-function setTier(id, tier) {
-  if (!state.ratings[id]) return;
-  const range = allowedTierRange(id);
-  if (!range) return;
-  if (tier !== null && (tier < range.min || tier > range.max)) return;
-  const orderBefore = makeRanking().order;
-  state.ratings[id].tier = tier;
-  if (tier !== null) {
-    state.tierMax = Math.max(state.tierMax, tier);
-    placeIntoTier(id, orderBefore);
-  }
-  finishTierChange();
-}
-
-/* Tierを変えたあとの後片付け。比較中の2枚がTierの違いで比べられなくなっていれば選び直し、保存して描画する */
-function finishTierChange() {
-  if (pair && !tierCompatible(pair[0], pair[1])) pair = null;
-  saveState();
-  render();
-}
-
-/* Tierを設定した画像を、Tierの決まりを満たす一番近い順位に移し、移った先の上下の画像の
-   ちょうど中間のレートにする。今の位置で決まりを満たしていれば動かさない。
-   orderBefore は、Tierを設定する前の順位 */
-function placeIntoTier(id, orderBefore) {
-  const t = getTier(id);
-  const others = orderBefore.filter(x => x !== id);
-  const pos = orderBefore.indexOf(id);
-  // 置ける範囲：上端ロックと、自分より番号の小さいTierの画像よりは下。下端ロックと、番号の大きいTierの画像よりは上
-  let lo = 0, hi = others.length;
-  others.forEach((x, i) => {
-    const tx = getTier(x);
-    if (lockRank(x) < 0 || (tx !== null && tx < t)) lo = Math.max(lo, i + 1);
-    if ((lockRank(x) > 0 || (tx !== null && tx > t)) && i < hi) hi = i;
-  });
-  const k = Math.min(Math.max(pos, lo), hi);
-  if (k === pos) return;
-  const above = k > 0 ? others[k - 1] : null;
-  const below = k < others.length ? others[k] : null;
-  if (above && below) state.ratings[id].r = (state.ratings[above].r + state.ratings[below].r) / 2;
-  else if (above) state.ratings[id].r = state.ratings[above].r - RATING_STEP;
-  else if (below) state.ratings[id].r = state.ratings[below].r + RATING_STEP;
-}
-
-/* Tierの箱を1つ、指定した境目に挿入する。pos は「Tier pos の直後」を表し、
-   0なら最上位（Tier1の上）に、tierMaxならTier tierMax の下に新しい空の箱ができる。
-   pos より大きいTierはすべて1つ繰り上がる */
-function insertTier(pos) {
-  if (state.tierMax >= TIER_MAX_CAP || !canEditTierBoxes()) return;
-  for (const id of allIds()) {
-    const t = state.ratings[id].tier;
-    if (t !== null && t > pos) state.ratings[id].tier = t + 1;
-  }
-  state.tierMax += 1;
-  finishTierChange();
-}
-
-/* 全員のTierをまとめて未定に戻す。レート・比較記録・ロックには触れない。
-   レートはいつも順位どおりに並べてあるので、Tierを外しても順位は変わらない */
-function resetAllTiers() {
-  if (!canEditTierBoxes()) return;
-  const withTier = allIds().filter(id => getTier(id) !== null);
-  if (!withTier.length) return;
-  for (const id of allIds()) state.ratings[id].tier = null;
-  state.tierMax = TIER_MAX_DEFAULT;
-  finishTierChange();
 }
 
 /* ==================================================================
    ロック
    順位の端からまとめて固定する仕組み。Tierとは独立していて、Tierをまたいでよい。
-   ・ロック中の画像は、ロック解除以外の操作（Tier変更・削除・移動・取り消し）をすべて受け付けない
-   ・ロック中の画像のレートは動かさない。並び替えでは何よりも先に端へ置く
-   ・ロックが1つでもあると、Tier追加・Tierを詰める・Tier初期化はできない
+   ・ロック中の画像は、ロック解除以外の操作（比較・Tier変更・削除・順位の移動・Undo）を受け付けない
+   ・ロック中の画像のレートは動かさない。順位では何よりも先に端へ置く
+   ・ロック中の画像が1枚でもあると、Tier追加・Tierを詰める・Tier初期化はできない
    ================================================================== */
-const isLocked = id => !!(state.ratings[id] && state.ratings[id].locked);
-const anyLocked = () => allIds().some(isLocked);
-// 操作を受け付けるかの判定。ロックを理由に操作を止める箇所は、すべてこの2つを使う
-const canEdit = id => !isLocked(id);              // この画像を操作できるか（ロック中は解除しかできない）
-const canEditTierBoxes = () => !anyLocked();      // Tier追加・Tierを詰める・Tier初期化ができるか
-// ロック中の画像がどちらの端に固定されているか。並び替えで最優先の判定に使う
-const lockRank = id => {
-  if (!isLocked(id)) return 0;
-  const zone = state.ratings[id].lockZone;
-  return zone === "top" ? -1 : zone === "bottom" ? 1 : 0;
+const isLocked = id => !!(state.images[id] && state.images[id].lock);
+const anyLocked = () => ids().some(isLocked);
+// 順位を決めるときの、ロックの位置。上端 -1、ロックなし 0、下端 1
+const lockSide = id => ({ top: -1, bottom: 1 })[state.images[id].lock] || 0;
+
+/* ==================================================================
+   Tier
+   各画像に付ける1以上の番号（未定は null）。番号が小さいほど上位で、
+   Tierが違う画像同士は、比較にも順位の移動にも使わない
+   ================================================================== */
+const tierOf = id => state.images[id].tier;
+const usedTiers = () => uniqueSorted(ids().map(tierOf).filter(t => t !== null));
+const maxTier = () => Math.max(0, ...usedTiers());
+// 片方が未定、または同じTierなら比較できる
+const tierCompatible = (a, b) => {
+  const ta = tierOf(a), tb = tierOf(b);
+  return ta === null || tb === null || ta === tb;
 };
+// 使われているTier番号が 1, 2, 3… と抜けなく並んでいなければ true
+const hasTierGap = () => usedTiers().some((t, i) => t !== i + 1);
+// Tierの虹色。tier は1始まり、count はTierの数
+const tierColor = (tier, count) => `hsl(${count > 1 ? ((tier - 1) / (count - 1)) * TIER_HUE_RANGE : 0}, ${TIER_SATURATION}%, ${TIER_LIGHTNESS}%)`;
+// 画像のTierメニューで選べる番号の上限。一番下の箱（tierCount）が使われていれば、その1つ下の箱も選べる
+const tierMenuMax = () => (maxTier() === state.tierCount && state.tierCount < TIER_COUNT_MAX) ? state.tierCount + 1 : state.tierCount;
 
-/* まとめてロック・解除。TierとLockは独立の仕組みで、ロックはTierをまたいでよい。
-   ロック中の画像は二択・自動出題・手動の順位入れ替えの対象から外れる */
-function toggleLock(id) {
-  if (!state.ratings[id]) return;
-  const ranking = makeRanking();
-  const order = ranking.order;
-  const pos = ranking.rank[id];
-  const n = order.length;
-  const distTop = pos, distBottom = n - 1 - pos;
-
-  if (!isLocked(id)) {
-    // 未ロック→ロック：押した位置から見て近いほうの端までを一括ロック（同数なら上側優先）
-    const top = distTop <= distBottom;
-    const range = top ? order.slice(0, pos + 1) : order.slice(pos, n);
-    range.forEach(rid => { state.ratings[rid].locked = true; state.ratings[rid].lockZone = top ? "top" : "bottom"; });
-  } else if (order.every(isLocked)) {
-    // 全画像ロック中の特殊ケース：押した位置から近いほうの端までを解除（同数なら下側優先）
-    const range = distTop < distBottom ? order.slice(0, pos + 1) : order.slice(pos, n);
-    range.forEach(rid => { state.ratings[rid].locked = false; state.ratings[rid].lockZone = null; });
-  } else {
-    // 通常：ロックされた塊のうち、未ロック範囲に接する内側の端から押した位置までを解除
-    let start = pos, end = pos;
-    while (start > 0 && isLocked(order[start - 1])) start--;
-    while (end < n - 1 && isLocked(order[end + 1])) end++;
-    const innerEdge = start === 0 ? end : start;
-    const from = Math.min(innerEdge, pos), to = Math.max(innerEdge, pos);
-    const range = order.slice(from, to + 1);
-    for (const rid of range) { state.ratings[rid].locked = false; state.ratings[rid].lockZone = null; }
+/* その画像に設定できるTier番号の範囲 { min, max }。ロック中の画像は変えられないので null。
+   上端にロックした画像のTierより上位にも、下端にロックした画像のTierより下位にもできない。
+   これを許すと、ロックを解除したときにTierの決まりで順位が動いてしまうため */
+function allowedTierRange(id) {
+  if (isLocked(id)) return null;
+  let min = 1, max = Infinity;
+  for (const x of ids()) {
+    const t = tierOf(x);
+    if (t === null) continue;
+    if (lockSide(x) < 0) min = Math.max(min, t);
+    if (lockSide(x) > 0) max = Math.min(max, t);
   }
-
-  if (pair && (isLocked(pair[0]) || isLocked(pair[1]))) pair = null;
-  saveState();
-  render();
+  return { min, max };
 }
 
 /* ==================================================================
-   順位とレートの並びを一致させる
-   順位は「ロック（端に固定）→ Tier番号 → レート」の順で決まる。どの操作のあとも、
-   この順位に沿ってレートが上から下へ必ず減っていくように整えておく。
-   こうしておくと、順位とレートの並びがいつも一致するので、
-   ・未ロックの隣同士の入れ替えやドラッグは、必ず順位の変化として表れる
-   ・Tierを未定に戻しても、ロックを解除しても、順位は動かない
+   順位
    ================================================================== */
 
-/* 並び順だけ（idの配列）を返す。ロックとTierの決まりを守った並び順を、今のレートから作る。
-   レートが決まりと食い違っていても（古いデータなど）、必ず1通りに決まる */
+/* 順位どおりの id の並びを返す。ロック → Tier → レートの優先順で決まる。
+   レートが決まりと食い違っていても、必ず1通りに決まる */
 function canonicalOrder() {
-  const byRating = allIds().sort((a, b) => (state.ratings[b].r - state.ratings[a].r) || (a < b ? -1 : a > b ? 1 : 0));
-  const top    = byRating.filter(id => lockRank(id) < 0);
-  const bottom = byRating.filter(id => lockRank(id) > 0);
-  const middle = byRating.filter(id => lockRank(id) === 0);
+  const byRating = ids().sort((a, b) => (ratingOf(b) - ratingOf(a)) || (a < b ? -1 : a > b ? 1 : 0));
+  const top    = byRating.filter(id => lockSide(id) < 0);
+  const bottom = byRating.filter(id => lockSide(id) > 0);
+  const middle = byRating.filter(id => lockSide(id) === 0);
   // Tierのある画像が占めている位置はそのままにして、そこへTier番号の小さい順に入れ直す。
   // 同じTierの中はレート順のまま。未定の画像は動かさない
-  const tiered = middle.filter(id => getTier(id) !== null).sort((a, b) => getTier(a) - getTier(b));
+  const tiered = middle.filter(id => tierOf(id) !== null).sort((a, b) => tierOf(a) - tierOf(b));
   let k = 0;
-  const mid = middle.map(id => (getTier(id) === null ? id : tiered[k++]));
+  const mid = middle.map(id => (tierOf(id) === null ? id : tiered[k++]));
   return [...top, ...mid, ...bottom];
 }
 
-/* 上の並び順に沿って、レートが必ず上から下へ減っていくように直す。
+/* 画面に出す順位。order：順位どおりの id の並び、rank[id]：0始まりの順位、
+   toPower(レート)：レートを強さ 0〜100（平均的なレートの相手に勝つ予想確率）に換算する関数 */
+function makeRanking() {
+  const avg = mean(ids().map(ratingOf));
+  const order = canonicalOrder();
+  const rank = {};
+  order.forEach((id, i) => { rank[id] = i; });
+  const toPower = r => Math.round(100 * expectedWin(r, avg));
+  return { order, rank, toPower };
+}
+
+/* canonicalOrder の並びに沿って、レートが上から下へ必ず減っていくように直す。
    ロック中の画像のレートは動かさない。ロックしていない画像のレートは、
    上端にロックした画像の最低レートより下、下端にロックした画像の最高レートより上に収める。
    すでに条件を満たしていれば何も変えず、食い違うところだけ、元の値に一番近い並びに直す */
 function normalizeRatings() {
   const order  = canonicalOrder();
-  const top    = order.filter(id => lockRank(id) < 0);
-  const bottom = order.filter(id => lockRank(id) > 0);
-  const middle = order.filter(id => lockRank(id) === 0);
+  const top    = order.filter(id => lockSide(id) < 0);
+  const bottom = order.filter(id => lockSide(id) > 0);
+  const middle = order.filter(id => lockSide(id) === 0);
   if (!middle.length) return;
 
-  const upper = top.length    ? Math.min(...top.map(id => state.ratings[id].r))    : Infinity;
-  const lower = bottom.length ? Math.max(...bottom.map(id => state.ratings[id].r)) : -Infinity;
+  const upper = top.length    ? Math.min(...top.map(ratingOf))    : Infinity;
+  const lower = bottom.length ? Math.max(...bottom.map(ratingOf)) : -Infinity;
   const m = middle.length;
   const gap = Number.isFinite(upper - lower) ? Math.min(RATING_MIN_GAP, (upper - lower) / (m + 1)) : RATING_MIN_GAP;
 
   // 逆転しているところを、平均でならして減っていく並びにする（単調回帰）
   const blocks = [];
   for (const id of middle) {
-    blocks.push({ sum: state.ratings[id].r, count: 1 });
+    blocks.push({ sum: ratingOf(id), count: 1 });
     while (blocks.length > 1) {
       const last = blocks[blocks.length - 1], prev = blocks[blocks.length - 2];
       if (last.sum / last.count < prev.sum / prev.count) break;
@@ -1286,15 +1287,113 @@ function normalizeRatings() {
     v[i] = Math.min(Math.max(v[i], lo), hi);
     if (i > 0) v[i] = Math.min(v[i], v[i - 1] - gap);
   }
-  middle.forEach((id, i) => { state.ratings[id].r = v[i]; });
+  middle.forEach((id, i) => { state.images[id].rating = v[i]; });
+}
+
+/* others（動かす画像を除いた順位どおりの並び）の k 番目に画像を入れるときのレート。
+   上下2枚のちょうど中間の値。一番上か一番下なら、隣から RATING_STEP 離した値 */
+function ratingForSlot(others, k) {
+  const above = k > 0 ? others[k - 1] : null;
+  const below = k < others.length ? others[k] : null;
+  if (above && below) return (ratingOf(above) + ratingOf(below)) / 2;
+  if (above) return ratingOf(above) - RATING_STEP;
+  return ratingOf(below) + RATING_STEP;
+}
+
+/* 画像 id を手動で動かせる範囲。order の中の位置 { lo, hi } で返す（両端を含む）。
+   今の位置から上下へ、Tierの合う未ロックの画像が続く範囲。ロック中の画像は動かせないので null */
+function movableRange(id, order) {
+  if (isLocked(id)) return null;
+  const canPass = x => tierCompatible(id, x) && !isLocked(x);
+  const pos = order.indexOf(id);
+  let lo = pos, hi = pos;
+  while (lo > 0 && canPass(order[lo - 1])) lo--;
+  while (hi < order.length - 1 && canPass(order[hi + 1])) hi++;
+  return { lo, hi };
+}
+
+/* ==================================================================
+   出題（次の2枚を選ぶ）
+   ================================================================== */
+
+// 比較できる相手（自分以外で、ロックされておらず、Tierの合う画像）が1枚でもいるか
+const hasPartner = id => ids().some(b => b !== id && !isLocked(b) && tierCompatible(id, b));
+// 比較に出せる画像
+const pickableIds = () => ids().filter(id => !isLocked(id) && hasPartner(id));
+// 今の2枚をこのまま出し続けてよいか
+const isPairValid = ([a, b]) => state.images[a] && state.images[b] && !isLocked(a) && !isLocked(b) && tierCompatible(a, b);
+
+/* 画像 a から見た予想勝率が [low, high] に入る相手の候補。
+   該当がなければ、レートの近い順に NEAR_OPPONENTS 枚を返す */
+function findOpponents(a, low, high) {
+  const candidates = ids().filter(b => b !== a && tierCompatible(a, b) && !isLocked(b));
+  const fresh = candidates.filter(b => !recentPairs.includes(pairKey(a, b)));
+  // 直近の組み合わせを避けきれないときは、避けるのをやめる
+  const others = fresh.length ? fresh : candidates;
+  const inRange = others.filter(b => {
+    const e = expectedWin(ratingOf(a), ratingOf(b));
+    return e >= low && e <= high;
+  });
+  if (inRange.length) return inRange;
+  return others
+    .sort((x, y) => Math.abs(ratingOf(x) - ratingOf(a)) - Math.abs(ratingOf(y) - ratingOf(a)))
+    .slice(0, NEAR_OPPONENTS);
+}
+
+const shuffleSides = ([a, b]) => (Math.random() < 0.5 ? [a, b] : [b, a]);
+
+/* counterKey（"placementLeft" か "wideMatchesLeft"）がまだ残っている画像を1枚選び、
+   相手は予想勝率の幅広い範囲から、そのカウンターを使い切った画像を優先して選ぶ。
+   全員が残っている（＝まだ誰も位置が決まっていない）ときは null */
+function pickWaitingPair(counterKey, candidates) {
+  const waiting = candidates.filter(id => state.images[id][counterKey] > 0);
+  if (!waiting.length || waiting.length >= candidates.length) return null;
+  const a = pickRandom(waiting);
+  const opponents = findOpponents(a, WIDE_WIN_LOW, WIDE_WIN_HIGH);
+  const settled = opponents.filter(b => state.images[b][counterKey] === 0);
+  return shuffleSides([a, pickRandom(settled.length ? settled : opponents)]);
+}
+
+function pickPair() {
+  const candidates = pickableIds();
+  if (candidates.length < 2) return null;
+
+  // 優先度1：配置比較が残っている画像
+  const placementPair = pickWaitingPair("placementLeft", candidates);
+  if (placementPair) return placementPair;
+
+  // 優先度2：配置比較は終わったが、幅広い相手と当てる回数が残っている画像
+  const widePair = pickWaitingPair("wideMatchesLeft", candidates);
+  if (widePair) return widePair;
+
+  // 通常：信頼幅の2乗に比例する確率で1枚選び、相手は実力の近い画像からランダムに選ぶ
+  const weights = candidates.map(id => currentDeviation(state.images[id]) ** 2);
+  let u = Math.random() * weights.reduce((s, w) => s + w, 0);
+  let a = candidates[0];
+  for (let i = 0; i < candidates.length; i++) {
+    u -= weights[i];
+    if (u <= 0) { a = candidates[i]; break; }
+  }
+  return shuffleSides([a, pickRandom(findOpponents(a, NORMAL_WIN_LOW, NORMAL_WIN_HIGH))]);
+}
+
+function rememberPair(a, b) {
+  recentPairs.push(pairKey(a, b));
+  if (recentPairs.length > RECENT_PAIRS_MAX) recentPairs.shift();
+}
+
+function forgetPair(a, b) {
+  const i = recentPairs.lastIndexOf(pairKey(a, b));
+  if (i !== -1) recentPairs.splice(i, 1);
 }
 
 /* ==================================================================
    ブラウザ内の保存（IndexedDB）
+   "images" に画像の Blob を { id, blob } で、"kv" に state を "state" という名前で置く
    ================================================================== */
 const dbReady = new Promise(resolve => {
   try {
-    const req = indexedDB.open("pairsort", 1);
+    const req = indexedDB.open(DB_NAME, 1);
     req.onupgradeneeded = () => {
       req.result.createObjectStore("images", { keyPath: "id" });
       req.result.createObjectStore("kv");
@@ -1306,6 +1405,8 @@ const dbReady = new Promise(resolve => {
   }
 });
 
+/* storeName の保存場所に対して operation を1つのトランザクションで行い、結果を返す。
+   operation の中で複数の書き込みをすると、すべて成功するか、すべて取り消されるかのどちらかになる */
 async function db(storeName, mode, operation) {
   const database = await dbReady;
   if (!database) { storageOK = false; return undefined; }
@@ -1324,38 +1425,55 @@ async function db(storeName, mode, operation) {
   });
 }
 
-// 保存の直前に、レートを順位どおりの並びに整える（どの操作のあとも必ずここを通る）
-const saveState = () => {
-  normalizeRatings();
-  return db("kv", "readwrite", s => s.put(JSON.parse(JSON.stringify(state)), "state"));
-};
+const saveState = () => db("kv", "readwrite", s => s.put(state, "state"));
 
-/* 同じ画像を誤って重複して追加していないか調べるためのハッシュ */
+/* state を書き換えたあと必ず呼ぶ。レートを順位どおりに整えてから、保存して描き直す */
+function commit() {
+  normalizeRatings();
+  saveState();
+  render();
+}
+
+/* 表示用の URL をすべて片付ける */
+function clearImageUrls() {
+  for (const id in imageUrls) {
+    URL.revokeObjectURL(imageUrls[id]);
+    delete imageUrls[id];
+  }
+}
+
+/* 画像の Blob が無い記録と、存在しない画像を指す履歴を state から取り除く */
+function dropImagesWithoutData() {
+  for (const id of ids()) if (!imageUrls[id]) delete state.images[id];
+  state.history = state.history.filter(h => Object.keys(h.before).every(id => state.images[id]));
+}
+
+/* ==================================================================
+   画像の処理
+   ================================================================== */
+const currentAspect = () => (ASPECTS[state.aspect] || ASPECTS[ASPECT_DEFAULT]).value;
+
+/* 比較画面・一覧の画像の枠を、今の縦横比に合わせる */
+function applyAspectCSS() {
+  document.documentElement.style.setProperty("--img-aspect", currentAspect());
+}
+
+/* 同じ画像を重複して追加していないか調べるためのハッシュ */
 async function hashBlob(blob) {
   const buf = await blob.arrayBuffer();
   const digest = await crypto.subtle.digest("SHA-256", buf);
   return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-// 今選ばれているリサイズの縦横比（幅 / 高さ）
-const currentAspect = () => RESIZE_RATIOS[state.resizeRatio] || RESIZE_RATIOS[RESIZE_DEFAULT];
-
-/* 比較画面・一覧の画像の枠を、今選ばれているリサイズ比率に合わせる */
-function applyImageAspectCSS() {
-  document.documentElement.style.setProperty("--img-aspect", currentAspect());
-}
-
-/* 画像を今選ばれているリサイズの縦横比（currentAspect）に中央でトリミングしてから、
-   高さ IMAGE_HEIGHT に縮小して JPEG にする。
-   すべての画像がここで同じ縦横比・同じ寸法になるので、
-   一覧やTier表シートでの見え方が画像ごとにばらつかない */
+/* 画像を今の縦横比に中央でトリミングしてから、高さ IMAGE_HEIGHT に縮小して JPEG にする。
+   すべての画像がここで同じ縦横比・同じ寸法になるので、一覧やTier表シートでの見え方がそろう */
 async function shrinkImage(file) {
   try {
     const bitmap = await createImageBitmap(file);
-    const aspect = currentAspect(); // 今選ばれているリサイズ比率（幅 / 高さ）
+    const aspect = currentAspect();
     const srcAspect = bitmap.width / bitmap.height;
 
-    // まずこの比率に合わせて元画像から切り出す範囲を決める
+    // 元画像から切り出す範囲
     let sx = 0, sy = 0, sw = bitmap.width, sh = bitmap.height;
     if (srcAspect > aspect) {
       sw = Math.round(bitmap.height * aspect);
@@ -1378,289 +1496,103 @@ async function shrinkImage(file) {
   }
 }
 
-/* ==================================================================
-   レート計算（Glicko 方式）
-   式の中の 400 と 10 は「レートの差が400で、勝つ見込みが10倍」というレートの物差し、
-   3 は Glicko の式の定数
-   ================================================================== */
-const Q = Math.LN10 / 400;    // Glicko の定数
+const blobToDataURL = blob => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload  = () => resolve(reader.result);
+  reader.onerror = reject;
+  reader.readAsDataURL(blob);
+});
 
-/* しばらく比較されていない画像は信頼幅が広がる。
-   1期間 = 各画像が平均して1回比較されるまでの比較数 */
-function currentRD(item) {
-  const period  = Math.max(1, allIds().length / 2);
-  const elapsed = (state.t - item.last) / period;
-  return Math.min(RD_START, Math.sqrt(item.rd ** 2 + RD_GROWTH ** 2 * elapsed));
-}
-
-const gFactor = rd => 1 / Math.sqrt(1 + 3 * Q * Q * rd * rd / (Math.PI * Math.PI));
-
-/* レート ra の側がレート rb の相手に勝つ予想確率 */
-const expectedWin = (ra, rb) => 1 / (1 + Math.pow(10, -(ra - rb) / 400));
-
-/* 1回分の結果でレートを更新する。scoreA は a から見た得点（勝ち1, 引き分け0.5, 負け0） */
-function applyResult(a, b, scoreA) {
-  const A = state.ratings[a], B = state.ratings[b];
-  const rdA = currentRD(A), rdB = currentRD(B);
-
-  const updateOne = (r, rd, rOpp, rdOpp, score) => {
-    const g = gFactor(rdOpp);
-    const E = 1 / (1 + Math.pow(10, -g * (r - rOpp) / 400));
-    const d2 = 1 / (Q * Q * g * g * E * (1 - E));
-    const denom = 1 / (rd * rd) + 1 / d2;
-    return { r: r + (Q / denom) * g * (score - E), rd: Math.max(RD_MIN, Math.sqrt(1 / denom)) };
-  };
-
-  const nextA = updateOne(A.r, rdA, B.r, rdB, scoreA);
-  const nextB = updateOne(B.r, rdB, A.r, rdA, 1 - scoreA);
-
-  for (const [item, next] of [[A, nextA], [B, nextB]]) {
-    item.r = next.r;
-    item.rd = next.rd;
-    item.n++;
-    item.last = state.t + 1;
-    if (item.p > 0) item.p--;
-    if (item.w > 0) item.w--;
-  }
-  state.t++;
+function dataURLToBlob(dataURL) {
+  const [meta, base64] = dataURL.split(",");
+  const type = (meta.match(/data:([^;]+)/) || [])[1] || "image/jpeg";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type });
 }
 
 /* ==================================================================
-   出題（次の2枚を選ぶ）
+   操作：比較・順位の移動・Undo
    ================================================================== */
+const SCORE = { LEFT: 1, RIGHT: 0, TIE: 0.5 }; // 左の画像から見た得点
 
-// 比較できる相手（自分以外で、ロックされておらず、Tierの条件を満たす画像）が1枚でもいるか
-const hasPartner = id => allIds().some(b => b !== id && !isLocked(b) && tierCompatible(id, b));
-
-/* 画像 a から見た予想勝率が [low, high] に入る相手の候補。
-   該当がなければ、レートが近い順に3枚を返す */
-function findOpponents(a, low, high, exclude = []) {
-  const A = state.ratings[a];
-  const candidates = allIds().filter(b => b !== a && tierCompatible(a, b) && !isLocked(b));
-  let others = candidates.filter(b => !exclude.includes(b) && !wasRecentlyPaired(a, b));
-  // 直近の組み合わせを避けきれない場合は、まず重複回避だけを緩め、それでも無ければ制約をすべて緩める
-  // （Tierが違う相手まで広げることはしない）
-  if (!others.length) others = candidates.filter(b => !exclude.includes(b));
-  if (!others.length) others = candidates;
-  const inRange = others.filter(b => {
-    const e = expectedWin(A.r, state.ratings[b].r);
-    return e >= low && e <= high;
-  });
-  if (inRange.length) return inRange;
-  return others
-    .sort((x, y) => Math.abs(state.ratings[x].r - A.r) - Math.abs(state.ratings[y].r - A.r))
-    .slice(0, NEAR_OPPONENTS);
-}
-
-const shuffleSides = ([a, b]) => (Math.random() < 0.5 ? [a, b] : [b, a]);
-
-/* counterKey は "p"（表示用、優先度1）か "w"（裏の幅広い比較、優先度2）。
-   そのカウンターがまだ残っている画像を対象に選び、相手は同じカウンターを使い切った
-   画像を優先しつつ、予想勝率20〜80%の幅広い範囲から選ぶ */
-function pickWaitingPair(counterKey, ids) {
-  const waiting = ids.filter(id => state.ratings[id][counterKey] > 0);
-  if (!waiting.length || waiting.length >= ids.length) return null;
-  const a = pickRandom(waiting);
-  const settled = findOpponents(a, WIDE_WIN_LOW, WIDE_WIN_HIGH).filter(b => state.ratings[b][counterKey] === 0);
-  const b = settled.length ? pickRandom(settled) : pickRandom(findOpponents(a, WIDE_WIN_LOW, WIDE_WIN_HIGH));
-  return shuffleSides([a, b]);
-}
-
-function pickPair() {
-  // 比較できる相手が誰もいない画像（Tierが独りぼっちで、未定の画像も無い）やロック中の画像は対象から外す
-  const ids = allIds().filter(id => !isLocked(id) && hasPartner(id));
-  if (ids.length < 2) return null;
-
-  // 優先度1：表示上の配置比較（p、4回）が残っている画像を、他の何よりも先に使い切る
-  const placementPair = pickWaitingPair("p", ids);
-  if (placementPair) return placementPair;
-
-  // 優先度2：表示は終わったが、裏の幅広い当たり方（w、7回まで）がまだ残っている画像
-  const widePair = pickWaitingPair("w", ids);
-  if (widePair) return widePair;
-
-  // 通常：信頼幅の2乗に比例する確率で対象を選び、相手は予想勝率30〜70%からランダム
-  const weights = ids.map(id => currentRD(state.ratings[id]) ** 2);
-  let u = Math.random() * weights.reduce((s, w) => s + w, 0);
-  let a = ids[0];
-  for (let i = 0; i < ids.length; i++) {
-    u -= weights[i];
-    if (u <= 0) { a = ids[i]; break; }
-  }
-  return shuffleSides([a, pickRandom(findOpponents(a, NORMAL_WIN_LOW, NORMAL_WIN_HIGH))]);
-}
-
-/* ==================================================================
-   操作
-   ================================================================== */
-const RESULT = { LEFT: 0, RIGHT: 1, TIE: 2 };
+const countPlacing = () => ids().filter(id => state.images[id].placementLeft > 0).length;
 
 /* Undo 用の履歴に1件足す。HISTORY_MAX 件を超えたら古いものから捨てる */
 function pushHistory(entry) {
-  state.hist.push(entry);
-  if (state.hist.length > HISTORY_MAX) state.hist.shift();
+  state.history.push(entry);
+  if (state.history.length > HISTORY_MAX) state.history.shift();
 }
 
-function answer(result) {
+/* 二択に答える。scoreLeft は SCORE のどれか */
+function answer(scoreLeft) {
   if (!pair) return;
   // 選んだカードにフォーカスが残ると、次の比較以降もずっと青い枠が出続けるので外す
-  const active = document.activeElement;
-  if (active && active.classList && active.classList.contains("card")) active.blur();
+  if (document.activeElement && document.activeElement.classList.contains("card")) document.activeElement.blur();
   const [left, right] = pair;
-  recentKeys.push(pairKey(left, right));
-  if (recentKeys.length > RECENT_KEYS_MAX) recentKeys.shift();
+  rememberPair(left, right);
 
-  const placingBefore = allIds().filter(id => state.ratings[id].p > 0).length;
-  const before = { [left]: { ...state.ratings[left] }, [right]: { ...state.ratings[right] } };
-  const scoreLeft = result === RESULT.LEFT ? 1 : result === RESULT.RIGHT ? 0 : 0.5;
+  const placingBefore = countPlacing();
+  const before = snapshot([left, right]);
   applyResult(left, right, scoreLeft);
-  pushHistory({ a: left, b: right, res: result, before });
-
-  // 配置比較が必要な画像がこの回答でちょうど無くなったか（1枚ごとではなく全体で）
-  const placingAfter = allIds().filter(id => state.ratings[id].p > 0).length;
-  const allPlacingDone = placingBefore > 0 && placingAfter === 0;
+  pushHistory({ type: "duel", a: left, b: right, before });
 
   pair = null;
-  saveState();
-  render();
-
-  if (allPlacingDone) showToast("配置比較がすべて終わりました");
+  commit();
+  // 配置比較が必要な画像が、この回答でちょうど1枚も無くなったら知らせる
+  if (placingBefore > 0 && countPlacing() === 0) showToast("配置比較がすべて終わりました");
 }
 
-/* 順位を1つだけ手動で入れ替える。dir は -1（前へ）か +1（後ろへ）。
-   異なるTierをまたぐ入れ替えはできない */
-function moveRank(id, dir) {
-  const ranking = makeRanking();
-  const pos = ranking.rank[id];
-  const targetPos = pos + dir;
-  if (targetPos < 0 || targetPos >= ranking.order.length) return;
-  const otherId = ranking.order[targetPos];
-  if (!tierCompatible(id, otherId) || !canEdit(id) || !canEdit(otherId)) return;
-
-  const before = { [id]: { ...state.ratings[id] }, [otherId]: { ...state.ratings[otherId] } };
-  const swapR = state.ratings[id].r;
-  state.ratings[id].r = state.ratings[otherId].r;
-  state.ratings[otherId].r = swapR;
-
-  pushHistory({ type: "swap", a: id, b: otherId, before });
-  saveState();
-  render(true);
-}
-
-/* ==================================================================
-   ドラッグ&ドロップによる順位の並べ替え
-   マウスで掴んだ画像を、他の画像の間に直接運んで順位を決める。
-   ←→と同じく、異なるTierをまたぐ移動とロック中の画像は対象外
-   ================================================================== */
-let dragId = null;
-let dragOrder = null; // ドラッグ中の見た目上の並び（idの配列、全件）
-let dragBand = null;  // ドラッグ中の画像が実際に入れる相手のidの集合
-
-/* idの現在位置から、両隣に向かってtierCompatibleかつ未ロックの間だけ範囲を広げる。
-   未定の画像はどの隣とも両立するので、実質リスト全体が対象になる */
-function computeDragBand(id, order) {
-  const pos = order.indexOf(id);
-  let lo = pos, hi = pos;
-  while (lo > 0 && tierCompatible(id, order[lo - 1]) && !isLocked(order[lo - 1])) lo--;
-  while (hi < order.length - 1 && tierCompatible(id, order[hi + 1]) && !isLocked(order[hi + 1])) hi++;
-  return new Set(order.slice(lo, hi + 1).filter(x => x !== id));
-}
-
-function startDrag(id, li) {
-  if (!canEdit(id)) return false;
-  const order = makeRanking().order;
-  dragId = id;
-  dragBand = computeDragBand(id, order);
-  dragOrder = [...order];
-  li.classList.add("dragging");
+/* 画像 id を、順位 newIndex（0始まり）へ動かす。←→ボタンとドラッグの両方から使う。
+   動かすのはその1枚のレートだけで、移動先の上下2枚の中間の値にする。
+   動かせない位置や、今と同じ位置なら何もせず false を返す */
+function moveImage(id, newIndex) {
+  const order = canonicalOrder();
+  const range = movableRange(id, order);
+  if (!range || newIndex < range.lo || newIndex > range.hi || newIndex === order.indexOf(id)) return false;
+  const before = snapshot([id]);
+  state.images[id].rating = ratingForSlot(order.filter(x => x !== id), newIndex);
+  pushHistory({ type: "move", before });
+  commit();
   return true;
 }
 
-/* targetId の左半分に来ていれば手前へ、右半分なら後ろへ、DOMと見た目上の並びを両方動かす */
-function moveDragTo(targetId, clientX) {
-  if (!dragId || targetId === dragId || !dragBand.has(targetId)) return;
-  const list = $("list");
-  const draggedLi = list.querySelector(`[data-id="${dragId}"]`);
-  const targetLi = list.querySelector(`[data-id="${targetId}"]`);
-  if (!draggedLi || !targetLi) return;
-
-  const rect = targetLi.getBoundingClientRect();
-  const before = clientX < rect.left + rect.width / 2;
-  draggedLi.remove();
-  targetLi.insertAdjacentElement(before ? "beforebegin" : "afterend", draggedLi);
-
-  dragOrder = dragOrder.filter(x => x !== dragId);
-  const targetIdx = dragOrder.indexOf(targetId);
-  dragOrder.splice(before ? targetIdx : targetIdx + 1, 0, dragId);
-}
-
-/* 新しい両隣の、ちょうど中間のレートを割り当てる。他の画像のレートには触れない。
-   レートはいつも順位どおりに並べてあるので、中間の値にすれば必ずその位置に収まる */
-function applyDragPosition(id, aboveId, belowId) {
-  const item = state.ratings[id];
-  if (!item || (!aboveId && !belowId)) return;
-  let newR;
-  if (aboveId && belowId) newR = (state.ratings[aboveId].r + state.ratings[belowId].r) / 2;
-  else if (aboveId) newR = state.ratings[aboveId].r - RATING_STEP;
-  else newR = state.ratings[belowId].r + RATING_STEP;
-
-  const before = { [id]: { ...item } };
-  item.r = newR;
-  pushHistory({ type: "swap", a: id, b: id, before }); // ドラッグも "swap" として記録する（a と b が同じ画像）
-  saveState();
-}
-
-function finishDrag() {
-  if (!dragId) return;
-  const id = dragId;
-  const idx = dragOrder.indexOf(id);
-  const aboveId = idx > 0 ? dragOrder[idx - 1] : null;
-  const belowId = idx < dragOrder.length - 1 ? dragOrder[idx + 1] : null;
-  dragId = null;
-  dragOrder = null;
-  dragBand = null;
-  applyDragPosition(id, aboveId, belowId);
-  render(true);
-}
-
-function cancelDrag() {
-  if (!dragId) return;
-  dragId = null;
-  dragOrder = null;
-  dragBand = null;
-  render(true);
-}
-
-
-/* ひとつ前の比較・入れ替え・ドラッグを取り消す。戻すのはレートと比較の記録だけで、
+/* ひとつ前の比較か順位の移動を取り消す。戻すのはレートと比較の記録だけで、
    Tierとロックは今のまま。ロック中の画像が含まれる操作は、解除するまで取り消せない */
 function undo() {
-  const entry = state.hist[state.hist.length - 1];
+  const entry = state.history[state.history.length - 1];
   if (!entry) return;
-  if (Object.keys(entry.before).some(id => !canEdit(id))) {
+  const touched = Object.keys(entry.before);
+  if (touched.some(isLocked)) {
     showMessage("ロック中の画像が含まれるため、取り消せません");
     return;
   }
-  state.hist.pop();
-  for (const id in entry.before) {
-    if (!state.ratings[id]) continue;
-    const { r, rd, n, p, w, last } = entry.before[id];
-    Object.assign(state.ratings[id], { r, rd, n, p, w, last });
-  }
+  state.history.pop();
+  for (const id of touched) Object.assign(state.images[id], entry.before[id]);
 
-  // 手動の入れ替え・ドラッグを戻す場合は、ここで終わり
-  if (entry.type === "swap") {
-    saveState();
-    render(true);
-    return;
+  if (entry.type === "duel") {
+    state.comparisons = Math.max(0, state.comparisons - 1);
+    forgetPair(entry.a, entry.b);
+    pair = [entry.a, entry.b];  // 取り消した二択をもう一度出す
   }
+  commit();
+}
 
-  state.t = Math.max(0, state.t - 1);
-  const lastKeyIndex = recentKeys.lastIndexOf(pairKey(entry.a, entry.b));
-  if (lastKeyIndex !== -1) recentKeys.splice(lastKeyIndex, 1);
-  pair = state.ratings[entry.a] && state.ratings[entry.b] ? [entry.a, entry.b] : null;
-  saveState();
-  render(true);
+/* ==================================================================
+   操作：画像の追加と削除
+   ================================================================== */
+
+/* 何枚中どこまで終わったかを示す進捗バー */
+function setProgress(done, total) {
+  $("progressTrack").hidden = false;
+  $("progressLabel").hidden = false;
+  $("progressBar").style.width = `${total ? Math.round((done / total) * 100) : 0}%`;
+  $("progressLabel").textContent = `${done} / ${total} 件`;
+}
+function clearProgress() {
+  $("progressTrack").hidden = true;
+  $("progressLabel").hidden = true;
 }
 
 async function addImages(files) {
@@ -1668,9 +1600,9 @@ async function addImages(files) {
   if (!images.length) return;
   showMessage("読み込み中…");
 
-  // 追加済みの画像や、今回まとめて選んだ中の重複を、内容のハッシュで見分ける
-  const fileHashes = await Promise.all(images.map(f => hashBlob(f)));
-  const seen = new Set(Object.values(state.hashes));
+  // 追加済みの画像や、今回まとめて選んだ中の重複を、中身のハッシュで見分ける
+  const fileHashes = await Promise.all(images.map(hashBlob));
+  const seen = new Set(ids().map(id => state.images[id].hash));
   const toAdd = [];
   let skipped = 0;
   images.forEach((file, i) => {
@@ -1685,82 +1617,950 @@ async function addImages(files) {
     return;
   }
 
-  const isFirst = allIds().length === 0;
-  const startRating = mean(allIds().map(id => state.ratings[id].r));
+  // 最初の1枚だけを追加するときは比べる相手がいないので、配置比較なしで置く
+  const needsPlacement = ids().length + toAdd.length > 1;
+  const startRating = mean(ids().map(ratingOf));
 
-  // 1枚ずつ順番に待つと画像の枚数だけ時間がかかるので、縮小と保存はまとめて並行に進める
+  // 縮小と保存は、1枚ずつ待たずにまとめて並行に進める
   let done = 0;
   const total = toAdd.length;
   if (total > 1) setProgress(0, total);
   await Promise.all(toAdd.map(async ({ file, hash }) => {
     const blob = await shrinkImage(file);
     const id = newId();
-    urls[id] = URL.createObjectURL(blob);
+    imageUrls[id] = URL.createObjectURL(blob);
     await db("images", "readwrite", s => s.put({ id, blob }));
-    state.names[id] = file.name.replace(/\.[^.]+$/, "");
-    state.ratings[id] = newRating(startRating);
-    state.hashes[id] = hash;
+    state.images[id] = { name: stripExtension(file.name), hash, ...freshRating(startRating, needsPlacement), tier: null, lock: null };
     done++;
     if (total > 1) setProgress(done, total);
   }));
   clearProgress();
-  // 最初の1枚だけのときは比べる相手がいないので、配置比較なしで置く
-  if (isFirst && toAdd.length === 1) { const only = state.ratings[allIds()[0]]; only.p = 0; only.w = 0; }
 
   message = "";
-  pair = null;
-  saveState();
-  render();
+  commit();
   if (skipped) showMessage(`同じ画像が既に追加されているため、${skipped}枚は追加しませんでした`);
 }
 
 function deleteImage(id) {
-  if (!canEdit(id)) return;
-  delete state.ratings[id];
-  delete state.names[id];
-  delete state.hashes[id];
-  state.hist = state.hist.filter(h => h.a !== id && h.b !== id);
+  if (!state.images[id] || isLocked(id)) return;
+  delete state.images[id];
+  state.history = state.history.filter(h => !(id in h.before));
   db("images", "readwrite", s => s.delete(id));
-  if (urls[id]) URL.revokeObjectURL(urls[id]);
-  delete urls[id];
-  if (pair && pair.includes(id)) pair = null;
-  saveState();
-  render();
+  URL.revokeObjectURL(imageUrls[id]);
+  delete imageUrls[id];
+  commit();
 }
 
-/* 全初期化：画像はすべて残し、全員のレートと比較記録だけを新規追加と同じ状態に戻す。
-   Tierの割り当てもすべて未定に戻る */
+/* 全初期化：画像はすべて残し、全員のレート・比較の記録・Tier・ロックを、
+   画像を新しく追加したときと同じ状態に戻す */
 function resetAllRatings() {
-  state.t = 0;            // 比較回数も0に戻す
-  recentKeys.length = 0;  // 直近に出した組み合わせの記録も消す
-  const ids = allIds();
-  const p = ids.length > 1 ? PLACEMENT_N : 0;
-  const w = ids.length > 1 ? PLACEMENT_WIDE_N : 0;
-  for (const id of ids) {
-    state.ratings[id] = newRating(RATING_START, { p, w });
+  state.comparisons = 0;
+  state.history = [];
+  state.tierCount = TIER_COUNT_DEFAULT;
+  recentPairs = [];
+  const needsPlacement = ids().length > 1;
+  for (const id of ids()) {
+    Object.assign(state.images[id], freshRating(RATING_START, needsPlacement), { tier: null, lock: null });
   }
-  state.tierMax = TIER_MAX_DEFAULT;
-  state.hist = [];
-  pair = null;
-  saveState();
-  render();
+  commit();
 }
 
+/* すべて削除：画像も含め、何もない状態に戻す */
 async function deleteAll() {
-  Object.values(urls).forEach(u => URL.revokeObjectURL(u));
-  for (const k in urls) delete urls[k];
+  clearImageUrls();
   state = emptyState();
   pair = null;
+  recentPairs = [];
   $("titleInput").value = "";
-  document.title = "二択式ランキングメーカー";
+  updateDocumentTitle();
+  applyAspectCSS();
   await db("images", "readwrite", s => s.clear());
-  saveState();
+  commit();
+}
+
+/* ==================================================================
+   操作：Tier
+   ================================================================== */
+function setTier(id, tier) {
+  const range = allowedTierRange(id);
+  if (!range) return;
+  if (tier !== null && (tier < range.min || tier > range.max)) return;
+  const orderBefore = canonicalOrder();
+  state.images[id].tier = tier;
+  if (tier !== null) {
+    state.tierCount = Math.max(state.tierCount, tier);
+    placeIntoTier(id, orderBefore);
+  }
+  commit();
+}
+
+/* Tierを設定した画像を、Tierとロックの決まりを満たす一番近い順位に移す。
+   今の位置で決まりを満たしていれば動かさない。orderBefore は、Tierを設定する前の順位 */
+function placeIntoTier(id, orderBefore) {
+  const t = tierOf(id);
+  const others = orderBefore.filter(x => x !== id);
+  const pos = orderBefore.indexOf(id);
+  // 置ける範囲：上端ロックと、自分より番号の小さいTierの画像よりは下。下端ロックと、番号の大きいTierの画像よりは上
+  let lo = 0, hi = others.length;
+  others.forEach((x, i) => {
+    const tx = tierOf(x);
+    if (lockSide(x) < 0 || (tx !== null && tx < t)) lo = Math.max(lo, i + 1);
+    if ((lockSide(x) > 0 || (tx !== null && tx > t)) && i < hi) hi = i;
+  });
+  const k = Math.min(Math.max(pos, lo), hi);
+  if (k !== pos) state.images[id].rating = ratingForSlot(others, k);
+}
+
+/* Tierの箱を1つ挿入する。pos は「Tier pos の直後」を表し、
+   0なら Tier 1 の上に、tierCount なら一番下に、新しい空の箱ができる。
+   pos より大きいTierはすべて1つ繰り下がる */
+function insertTier(pos) {
+  if (state.tierCount >= TIER_COUNT_MAX || anyLocked()) return;
+  for (const id of ids()) {
+    const t = tierOf(id);
+    if (t !== null && t > pos) state.images[id].tier = t + 1;
+  }
+  state.tierCount += 1;
+  commit();
+}
+
+/* 使われていないTier番号を取り除き、使われている番号だけで1から並べ直す */
+function compactTiers() {
+  if (anyLocked()) return;
+  const used = usedTiers();
+  const renumber = {};
+  used.forEach((old, i) => { renumber[old] = i + 1; });
+  for (const id of ids()) {
+    const t = tierOf(id);
+    if (t !== null) state.images[id].tier = renumber[t];
+  }
+  state.tierCount = Math.max(TIER_COUNT_DEFAULT, used.length);
+  commit();
+}
+
+/* 全員のTierを未定に戻す。レートはいつも順位どおりに並べてあるので、順位は変わらない */
+function resetAllTiers() {
+  if (anyLocked() || !usedTiers().length) return;
+  for (const id of ids()) state.images[id].tier = null;
+  state.tierCount = TIER_COUNT_DEFAULT;
+  commit();
+}
+
+/* ==================================================================
+   操作：ロック
+   ================================================================== */
+function toggleLock(id) {
+  if (!state.images[id]) return;
+  const ranking = makeRanking();
+  const order = ranking.order;
+  const pos = ranking.rank[id];
+  const n = order.length;
+  const distTop = pos, distBottom = n - 1 - pos;
+  const setLock = (list, lock) => list.forEach(x => { state.images[x].lock = lock; });
+
+  if (!isLocked(id)) {
+    // ロックする：押した画像から近いほうの端までを、まとめてロック（同じ距離なら上側）
+    const toTop = distTop <= distBottom;
+    setLock(toTop ? order.slice(0, pos + 1) : order.slice(pos, n), toTop ? "top" : "bottom");
+  } else if (order.every(isLocked)) {
+    // 全画像がロック中：押した画像から近いほうの端までを解除（同じ距離なら下側）
+    setLock(distTop < distBottom ? order.slice(0, pos + 1) : order.slice(pos, n), null);
+  } else {
+    // 通常の解除：押した画像を含むロックの塊のうち、ロックしていない範囲に接する内側の端から、押した画像までを解除
+    let start = pos, end = pos;
+    while (start > 0 && isLocked(order[start - 1])) start--;
+    while (end < n - 1 && isLocked(order[end + 1])) end++;
+    const innerEdge = start === 0 ? end : start;
+    setLock(order.slice(Math.min(innerEdge, pos), Math.max(innerEdge, pos) + 1), null);
+  }
+  commit();
+}
+
+/* ==================================================================
+   操作：タイトルと縦横比
+   ================================================================== */
+function setTitle(text) {
+  state.title = text;
+  updateDocumentTitle();
+}
+
+/* 縦横比を変える。追加済みの画像は切り抜き直せないので、画像が1枚でもあれば変えない */
+function setAspect(key) {
+  if (ids().length || !ASPECTS[key]) return;
+  state.aspect = key;
+  applyAspectCSS();
+  commit();
+}
+
+/* ==================================================================
+   保存ファイルの書き出しと読み込み
+   ================================================================== */
+
+/* ファイルを保存する。保存場所を選べるブラウザではその場で尋ね、それ以外では通常のダウンロードにする。
+   保存場所を選ぶ画面でキャンセルされたときは、code が "declined" のエラーを投げる */
+async function downloadFile(filename, blob) {
+  if (typeof window.showSaveFilePicker === "function") {
+    const ext = (filename.match(/\.([^.]+)$/) || [, ""])[1];
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: ext ? [{ description: ext.toUpperCase(), accept: { [blob.type || "application/octet-stream"]: ["." + ext] } }] : undefined,
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return;
+    } catch (e) {
+      if (e && e.name === "AbortError") { const err = new Error("cancelled"); err.code = "declined"; throw err; }
+      // それ以外の失敗は、下の通常のダウンロードで保存し直す
+    }
+  }
+
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), DOWNLOAD_URL_MS);
+}
+
+/* 「○○ランキング-20260101.json」のようなファイル名。タイトルが空なら「ranking-20260101.json」 */
+function titledFilename(ext) {
+  const d = new Date(), pad = x => String(x).padStart(2, "0");
+  const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+  return `${rankingTitle() || "ranking"}-${stamp}.${ext}`;
+}
+
+/* 保存ファイルの中身：{ app: APP_ID, savedAt, state, images: { id: 画像の data URL } } */
+async function exportData() {
+  if (!ids().length) { showMessage("保存するデータがありません"); return; }
+  showMessage("書き出し中…");
+
+  const records = (await db("images", "readonly", s => s.getAll())) || [];
+  const images = {};
+  for (const rec of records) {
+    if (state.images[rec.id]) images[rec.id] = await blobToDataURL(rec.blob);
+  }
+  const data = { app: APP_ID, savedAt: new Date().toISOString(), state, images };
+
+  try {
+    await downloadFile(titledFilename("json"), new Blob([JSON.stringify(data)], { type: "application/json" }));
+    showMessage("保存しました");
+  } catch (e) {
+    showMessage(e && e.code === "declined" ? "保存をキャンセルしました" : "保存できませんでした");
+  }
+}
+
+/* 保存ファイルから復元する。ファイルの中身をすべて確かめてから、今のデータと入れ替える */
+async function importData(file) {
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+  } catch (e) {
+    showMessage("ファイルを読み込めませんでした");
+    return;
+  }
+  const valid = data && data.app === APP_ID && data.state && data.state.version === SAVE_VERSION
+    && data.state.images && data.images;
+  if (!valid) { showMessage("このツールの保存ファイルではありません"); return; }
+
+  const blobs = {};
+  try {
+    for (const id of Object.keys(data.state.images)) {
+      if (data.images[id]) blobs[id] = dataURLToBlob(data.images[id]);
+    }
+  } catch (e) {
+    showMessage("ファイルが壊れているため読み込めませんでした");
+    return;
+  }
+
+  // ここから入れ替え。画像の保存場所は1回のトランザクションでまとめて入れ替える
+  await db("images", "readwrite", s => {
+    s.clear();
+    for (const [id, blob] of Object.entries(blobs)) s.put({ id, blob });
+  });
+  clearImageUrls();
+  for (const [id, blob] of Object.entries(blobs)) imageUrls[id] = URL.createObjectURL(blob);
+
+  state = data.state;
+  dropImagesWithoutData();
+  pair = null;
+  recentPairs = [];
+  applyAspectCSS();
+  $("titleInput").value = state.title;
+  updateDocumentTitle();
+  commit();
+  showMessage(`${ids().length}件を読み込みました`);
+}
+
+/* ==================================================================
+   Tier表シートの書き出し
+   順位どおりに横 SHEET_COLS 枚ずつ並べ、行の左に見出しを付けた1枚の PNG 画像を作る。
+   ・Tierが1つも無いとき：SHEET_COLS 位ごとに区切り、「Top10」「Top20」…の見出しを付ける
+   ・Tierがあるとき：Tierごとに行を分け、Tier名を見出しにする（tierGroups の決まりで、未定の画像もどこかのTierに入る）
+   強さなどの数値は入れず、画像と順位番号だけを載せる
+   ================================================================== */
+function loadImageElement(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+/* object-fit: cover と同じ考え方で、枠いっぱいに敷き詰めるように描く */
+function drawCover(ctx, img, x, y, w, h) {
+  const scale = Math.max(w / img.width, h / img.height);
+  const dw = img.width * scale, dh = img.height * scale;
+  ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+}
+
+/* 順位を、各Tierの最上位（最初に出てくる順位）を境目にしてグループ分けする。
+   Tier同士の間にある未定の画像は、すぐ上のTierに入れる。
+   一番上のTierより上の未定はそのTierに、一番下のTierより下の未定はそのTierに入れる。
+   Tierが1つも無ければ空の配列を返す。Tier表シートの行分けと、Tierごとの枚数の表示に使う */
+function tierGroups(order) {
+  const tops = {}; // Tier番号 → 最初に出てくる位置
+  order.forEach((id, i) => {
+    const t = tierOf(id);
+    if (t !== null && !(t in tops)) tops[t] = i;
+  });
+  const tiers = Object.keys(tops).map(Number).sort((a, b) => a - b);
+
+  return tiers.map((t, k) => {
+    const start = k === 0 ? 0 : tops[t];
+    const end = k === tiers.length - 1 ? order.length : tops[tiers[k + 1]];
+    return { tier: t, ids: order.slice(start, end) };
+  });
+}
+
+/* シートの行。{ ids, label, color, groupStart: 見出しの最初の行か, groupSpan: 同じ見出しの行数 } */
+function buildTierRows(order, tierNames) {
+  const rows = [];
+  for (const g of tierGroups(order)) {
+    const label = tierNames[g.tier] || `Tier ${g.tier}`;
+    const color = tierColor(g.tier, state.tierCount);
+    const groupSpan = Math.ceil(g.ids.length / SHEET_COLS);
+    for (let i = 0; i < g.ids.length; i += SHEET_COLS) {
+      rows.push({ ids: g.ids.slice(i, i + SHEET_COLS), label, color, groupStart: i === 0, groupSpan });
+    }
+  }
+  return rows;
+}
+
+/* Tierが1つも無いときの行。最後の行が SHEET_COLS 枚に満たなくても、見出しは SHEET_COLS の倍数にする。
+   色は行の位置に応じた虹色 */
+function buildTopNRows(order) {
+  const rowCount = Math.ceil(order.length / SHEET_COLS);
+  const rows = [];
+  for (let r = 0; r < rowCount; r++) {
+    const ids = order.slice(r * SHEET_COLS, (r + 1) * SHEET_COLS);
+    rows.push({ ids, label: `Top${(r + 1) * SHEET_COLS}`, color: tierColor(r + 1, rowCount), groupStart: true, groupSpan: 1 });
+  }
+  return rows;
+}
+
+/* シートを1枚の画像に描いて PNG にする。タイトル、行の見出し、画像、マス目の線の順に重ねて描く */
+async function buildSheet(rows, ranking, title) {
+  const cellH  = Math.round(SHEET_CELL_W / currentAspect());
+  const titleH = title ? SHEET_TITLE_H : 0;
+  const width  = SHEET_LABEL_W + SHEET_COLS * SHEET_CELL_W;
+  const height = titleH + rows.length * cellH;
+  const layout = { cellH, titleH, width, height };
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = pal("black");
+  ctx.fillRect(0, 0, width, height);
+
+  if (title) drawSheetTitle(ctx, title, titleH);
+  drawSheetLabels(ctx, rows, layout);
+  await drawSheetImages(ctx, rows, ranking, layout);
+  drawSheetGrid(ctx, rows, layout);
+
+  return new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+}
+
+/* 文字を1回描く。描いたあとは揃え方を既定に戻す */
+function drawText(ctx, text, x, y, size, align) {
+  ctx.fillStyle = pal("white");
+  ctx.font = `bold ${size}px ${SHEET_FONT}`;
+  ctx.textAlign = align;
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, x, y);
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+}
+
+/* シートの一番上のタイトル */
+function drawSheetTitle(ctx, title, titleH) {
+  drawText(ctx, title, SHEET_TITLE_PAD, titleH / 2, SHEET_TITLE_SIZE, "left");
+}
+
+/* 行の左の見出しと、その背景色。同じ見出しが複数行にまたがるときは、
+   その行数ぶんの高さでまとめて1回だけ塗り、縦方向の中央に見出しを置く */
+function drawSheetLabels(ctx, rows, { cellH, titleH }) {
+  rows.forEach((row, r) => {
+    if (!row.groupStart) return;
+    const y = titleH + r * cellH;
+    const h = row.groupSpan * cellH;
+    ctx.fillStyle = row.color;
+    ctx.fillRect(0, y, SHEET_LABEL_W, h);
+    drawText(ctx, row.label, SHEET_LABEL_W / 2, y + h / 2, SHEET_LABEL_SIZE, "center");
+  });
+}
+
+/* 各マスの画像と、左上の順位番号（全体の中での順位）。読み込めない画像は灰色のマスにする */
+async function drawSheetImages(ctx, rows, ranking, { cellH, titleH }) {
+  for (let r = 0; r < rows.length; r++) {
+    const y = titleH + r * cellH;
+    for (let col = 0; col < rows[r].ids.length; col++) {
+      const id = rows[r].ids[col];
+      const x = SHEET_LABEL_W + col * SHEET_CELL_W;
+
+      try {
+        drawCover(ctx, await loadImageElement(imageUrls[id]), x, y, SHEET_CELL_W, cellH);
+      } catch (e) {
+        ctx.fillStyle = pal("ash-700");
+        ctx.fillRect(x, y, SHEET_CELL_W, cellH);
+      }
+
+      ctx.fillStyle = palAlpha("black", SHEET_RANK_BOX_ALPHA);
+      ctx.fillRect(x, y, SHEET_RANK_BOX_W, SHEET_RANK_BOX_H);
+      ctx.fillStyle = pal("white");
+      ctx.font = `bold ${SHEET_RANK_SIZE}px ${SHEET_FONT}`;
+      ctx.fillText(String(ranking.rank[id] + 1), x + SHEET_RANK_TEXT_X, y + SHEET_RANK_TEXT_Y);
+    }
+  }
+}
+
+/* マス目の線。太さ1pxで、座標を0.5pxずらして引くことで、線がぼやけたり隣のマスにはみ出したりしないようにする。
+   画像の側はすべての行の境目に引き、見出しの側は見出しの切れ目と上下の端だけに引く */
+function drawSheetGrid(ctx, rows, { cellH, titleH, width, height }) {
+  const line = (x1, y1, x2, y2) => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); };
+  ctx.strokeStyle = pal("ash-500");
+  ctx.lineWidth = 1;
+  for (let r = 0; r <= rows.length; r++) {
+    const y = titleH + r * cellH + 0.5;
+    line(SHEET_LABEL_W, y, width, y);
+    if (r === 0 || r === rows.length || rows[r].groupStart) line(0, y, SHEET_LABEL_W, y);
+  }
+  for (let col = 0; col <= SHEET_COLS; col++) {
+    const x = SHEET_LABEL_W + col * SHEET_CELL_W + 0.5;
+    line(x, titleH, x, height);
+  }
+}
+
+/* シートを作って保存する。tierNames は { Tier番号: 名前 }。名前の無い番号は「Tier N」になる */
+async function runExportSheets(tierNames) {
+  const ranking = makeRanking();
+  const rows = maxTier() === 0 ? buildTopNRows(ranking.order) : buildTierRows(ranking.order, tierNames);
+  if (!rows.length) { showMessage("画像がありません"); return; }
+  showMessage("シートを作成中…");
+
+  const blob = await buildSheet(rows, ranking, rankingTitle());
+  try {
+    await downloadFile(titledFilename("png"), blob);
+    showMessage("シートを書き出しました");
+  } catch (e) {
+    showMessage(e && e.code === "declined" ? "シートの保存をキャンセルしました" : "シートを保存できませんでした");
+  }
+}
+
+/* 「シート作成」を押したときの入口。
+   Tier番号に抜けがあれば先に詰めるかを尋ね、Tierがあれば名前を付けるかを尋ねてから作る */
+function exportSheets() {
+  if (hasTierGap()) {
+    if (anyLocked()) {
+      showMessage("Tierの番号を詰める必要がありますが、ロック中は詰められません。ロックを解除してから作成してください");
+      return;
+    }
+    openModal("tierGapOverlay");
+    return;
+  }
+  askTierNamesThenExport();
+}
+
+function askTierNamesThenExport() {
+  if (maxTier() === 0) { runExportSheets({}); return; }
+  $("tierNameQuestion").hidden = false;
+  $("tierNameForm").hidden = true;
+  openModal("tierNameOverlay");
+}
+
+function openTierNameForm() {
+  const box = $("tierNameInputs");
+  box.textContent = "";
+  for (let t = 1; t <= maxTier(); t++) {
+    const row = document.createElement("div");
+    row.className = "tier-name-row";
+    const label = document.createElement("label");
+    label.textContent = `Tier ${t}`;
+    label.htmlFor = `tierNameInput${t}`;
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "text-input";
+    input.id = `tierNameInput${t}`;
+    input.placeholder = `Tier ${t}`;
+    input.maxLength = TIER_NAME_MAX;
+    row.append(label, input);
+    box.append(row);
+  }
+  $("tierNameQuestion").hidden = true;
+  $("tierNameForm").hidden = false;
+}
+
+function collectTierNamesAndExport() {
+  const names = {};
+  for (let t = 1; t <= maxTier(); t++) {
+    const v = $(`tierNameInput${t}`).value.trim();
+    if (v) names[t] = v;
+  }
+  closeModal("tierNameOverlay");
+  runExportSheets(names);
+}
+
+/* ==================================================================
+   サンプル
+   samples/samples.json に [{"file": "01.jpg", "name": "表示名"}, ...] の形で一覧を書く。
+   画像は既定の縦横比（ASPECT_DEFAULT）で切り抜き済みのものを置いておく。
+   一覧が読めないときは「サンプル」ボタンを出さない
+   ================================================================== */
+let sampleList = [];
+
+async function prepareSamples() {
+  try {
+    const res = await fetch(SAMPLE_DIR + "samples.json", { cache: "no-cache" });
+    if (!res.ok) return;
+    const list = await res.json();
+    if (Array.isArray(list) && list.length) {
+      sampleList = list;
+      $("samplePicker").hidden = false;
+    }
+  } catch (e) {
+    // サンプルなしで動かす
+  }
+}
+
+/* サンプルを count 枚読み込み、今のデータと入れ替える。
+   サンプルは切り抜き済みなので縮小し直さず、そのまま保存する */
+async function loadSamples(count) {
+  showMessage("サンプルを読み込み中…");
+  const entries = sampleList.slice(0, count);
+
+  let done = 0;
+  const total = entries.length;
+  setProgress(0, total);
+  const loaded = await Promise.all(entries.map(async entry => {
+    try {
+      const res = await fetch(SAMPLE_DIR + entry.file);
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      return { blob, name: entry.name || stripExtension(entry.file), hash: await hashBlob(blob) };
+    } catch (e) {
+      return null; // 読めない画像は飛ばす
+    } finally {
+      done++;
+      setProgress(done, total);
+    }
+  }));
+  clearProgress();
+
+  const ok = loaded.filter(Boolean);
+  if (!ok.length) { showMessage("サンプルを読み込めませんでした"); return; }
+
+  await deleteAll();
+  const items = ok.map(item => ({ ...item, id: newId() }));
+  await db("images", "readwrite", s => { for (const { id, blob } of items) s.put({ id, blob }); });
+  for (const { id, blob, name, hash } of items) {
+    imageUrls[id] = URL.createObjectURL(blob);
+    state.images[id] = { name, hash, ...freshRating(RATING_START, items.length > 1), tier: null, lock: null };
+  }
+  message = "";
+  commit();
+}
+
+/* ==================================================================
+   画面の描画
+   ================================================================== */
+let messageTimer = null;
+let toastTimer = null;
+
+/* 上部の小さなお知らせ。MESSAGE_MS ミリ秒で消える */
+function showMessage(text) {
+  message = text;
+  renderStatus();
+  clearTimeout(messageTimer);
+  messageTimer = setTimeout(() => { message = ""; renderStatus(); }, MESSAGE_MS);
+}
+
+/* 配置比較の完了など、見落としたくない知らせは、画面上部の大きな表示で出す */
+function showToast(text) {
+  const el = $("toast");
+  el.hidden = false;
+  el.textContent = text;
+  requestAnimationFrame(() => el.classList.add("show"));
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    el.classList.remove("show");
+    setTimeout(() => { el.hidden = true; }, TOAST_FADE_MS);
+  }, TOAST_MS);
+}
+
+function powerText(id, ranking) {
+  const image = state.images[id];
+  const dev = currentDeviation(image);
+  const p = ranking.toPower;
+  return `強さ ${p(image.rating)}（${p(image.rating - dev)}〜${p(image.rating + dev)}）`;
+}
+
+const placementText = image => `配置比較中 ${PLACEMENT_N - image.placementLeft}/${PLACEMENT_N}`;
+
+/* 画面全体を今の state に合わせて描き直す。比較中の2枚が出せなくなっていれば選び直す */
+function render() {
+  if (pair && !isPairValid(pair)) pair = null;
+  if (!pair) pair = pickPair();
+  const ranking = makeRanking();
+  const hasImages = ids().length > 0;
+  const tierBoxesEditable = !anyLocked();
+
+  $("undoBtn").disabled = !state.history.length;
+  $("empty").hidden = hasImages;
+  $("resizeBtn").disabled = hasImages;
+  $("resizeBtn").title = hasImages ? "画像があるあいだは変更できません" : "";
+  $("tierAddBtn").disabled = state.tierCount >= TIER_COUNT_MAX || !tierBoxesEditable;
+  $("compactTiersBtn").disabled = !tierBoxesEditable;
+  $("resetAllTiersBtn").disabled = !tierBoxesEditable;
+
+  renderStatus();
+  renderArena(ranking);
+  renderList(ranking);
+  renderTierBreakdown(ranking);
+}
+
+function renderStatus() {
+  const count = ids().length;
+  let text = "";
+  if (count) {
+    text = `登録 ${count}件　比較 ${state.comparisons}回`;
+    const placing = countPlacing();
+    if (placing) text += `　配置比較中 ${placing}件`;
+    if (count >= 2 && pickableIds().length < 2) text += "。比較できる組み合わせがありません";
+  }
+  if (!storageOK) text += "。この環境では保存できないため、閉じると消えます";
+  $("status").textContent = message || text;
+}
+
+function renderArena(ranking) {
+  $("arena").hidden = !pair;
+  if (!pair) return;
+
+  for (const [card, deleteBtn, id] of [
+    [$("leftCard"), $("leftDeleteBtn"), pair[0]],
+    [$("rightCard"), $("rightDeleteBtn"), pair[1]],
+  ]) {
+    const image = state.images[id];
+    const img = card.querySelector("img");
+    img.src = imageUrls[id] || "";
+    img.alt = showNames ? image.name : "";
+    card.querySelector(".name").textContent = showNames ? image.name : "";
+    card.querySelector(".power").textContent = !showPower ? ""
+      : image.placementLeft > 0 ? placementText(image)
+      : `${powerText(id, ranking)}・${ranking.rank[id] + 1}位`;
+    // 一度も比較していない画像だけ、その場で消せる削除ボタンを出す
+    deleteBtn.hidden = image.comparisons > 0;
+  }
+  $("powerBtn").textContent = showPower ? "強さを隠す" : "強さを表示";
+}
+
+function renderList(ranking) {
+  const count = ids().length;
+  $("listTitle").hidden = !count;
+  $("listTitle").textContent = `現在の順位（${count}件）`;
+  const list = $("list");
+  list.textContent = "";
+  ranking.order.forEach((id, i) => list.append(makeListItem(id, i, ranking)));
+}
+
+/* Tierごとの枚数。Tier表シートと同じ tierGroups の決まりで数える */
+function renderTierBreakdown(ranking) {
+  const el = $("tierBreakdown");
+  const groups = tierGroups(ranking.order);
+  el.hidden = !groups.length;
+  el.textContent = groups.map(g => `Tier${g.tier}: ${g.ids.length}枚`).join("　");
+}
+
+/* 順位一覧のカード1枚。上から、Tierのリボン・画像・名前・強さ・操作ボタンの順に並べる */
+function makeListItem(id, index, ranking) {
+  const li = document.createElement("li");
+  li.className = "item";
+  li.dataset.id = id;
+  // ドラッグ中の画像がこのカードの上に来たら、その位置へ動かして見せる
+  li.addEventListener("dragover", e => {
+    if (!drag) return;
+    e.preventDefault();
+    moveDragTo(id, e.clientX);
+  });
+  li.append(
+    makeTierRibbon(id),
+    makeThumb(id, index, li),
+    makeItemName(id),
+    makeItemMeta(id, ranking),
+    makeItemActions(id, index, ranking)
+  );
+  return li;
+}
+
+/* Tierのリボン。未定なら灰色の「Tierを設定」、設定済みならTierの色で番号を出す。押すとTierを選ぶメニューが開く */
+function makeTierRibbon(id) {
+  const ribbon = document.createElement("button");
+  const tier = tierOf(id);
+  const locked = isLocked(id);
+  ribbon.className = "tier-ribbon" + (tier !== null ? " assigned" : "");
+  ribbon.textContent = tier !== null ? `Tier ${tier}` : "Tierを設定";
+  ribbon.style.background = tier !== null ? tierColor(tier, state.tierCount) : "";
+  ribbon.disabled = locked;
+  ribbon.title = locked ? "ロック中はTierを変えられません" : "";
+  ribbon.addEventListener("click", () => openTierMenu(id, ribbon));
+  return ribbon;
+}
+
+/* 左上に順位の番号を重ねた画像。ロックされていなければ、つかんでドラッグすると順位を動かせる */
+function makeThumb(id, index, li) {
+  const locked = isLocked(id);
+  const thumb = document.createElement("div");
+  thumb.className = "thumb";
+  thumb.draggable = !locked;
+  thumb.title = locked ? "" : "ドラッグして順位を変える";
+  thumb.addEventListener("dragstart", e => {
+    if (!startDrag(id, li)) { e.preventDefault(); return; }
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", id);
+  });
+  // ページの外で離したときなど、確定しないまま終わったら元に戻す
+  thumb.addEventListener("dragend", () => { if (drag) cancelDrag(); });
+
+  const badge = document.createElement("div");
+  badge.className = "rank";
+  badge.textContent = index + 1;
+
+  const img = document.createElement("img");
+  img.src = imageUrls[id] || "";
+  img.alt = showNames ? state.images[id].name : "";
+  img.loading = "lazy";
+  thumb.append(badge, img);
+  return thumb;
+}
+
+/* 画像の名前。名前を隠しているときは空にする */
+function makeItemName(id) {
+  const name = document.createElement("div");
+  name.className = "name";
+  name.textContent = showNames ? state.images[id].name : "";
+  return name;
+}
+
+/* 強さと比較回数。配置比較の途中なら、その進み具合を出す */
+function makeItemMeta(id, ranking) {
+  const image = state.images[id];
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  meta.textContent = image.placementLeft > 0 ? placementText(image) : `${powerText(id, ranking)}・比較${image.comparisons}回`;
+  return meta;
+}
+
+/* 削除・ロック（解除）・←・→ のボタン。←→ は、movableRange の範囲から出る方向には押せない */
+function makeItemActions(id, index, ranking) {
+  const locked = isLocked(id);
+  const range = movableRange(id, ranking.order);
+  const actions = document.createElement("div");
+  actions.className = "item-actions";
+
+  const button = (text, className, title, onClick) => {
+    const b = document.createElement("button");
+    b.textContent = text;
+    b.className = className;
+    b.title = title;
+    if (onClick) b.addEventListener("click", onClick);
+    return b;
+  };
+
+  const deleteBtn = button("削除", "tone-danger", "");
+  deleteBtn.disabled = locked;
+  confirmTwice(deleteBtn, "もう一度押すと削除", () => deleteImage(id));
+
+  const lockBtn = button(locked ? "解除" : "ロック", locked ? "tone-gold" : "",
+    locked ? "ロックを解除する" : "この位置までまとめてロックする", () => toggleLock(id));
+
+  const upBtn = button("←", "", "ひとつ前の順位へ動かす", () => moveImage(id, index - 1));
+  upBtn.disabled = !range || index - 1 < range.lo;
+
+  const downBtn = button("→", "", "ひとつ後ろの順位へ動かす", () => moveImage(id, index + 1));
+  downBtn.disabled = !range || index + 1 > range.hi;
+
+  actions.append(deleteBtn, lockBtn, upBtn, downBtn);
+  return actions;
+}
+
+/* 使い方や案内の文の中の数値を、設定値から埋める（data-fill の名前で対応させる） */
+function fillTexts() {
+  const values = {
+    placementCount: PLACEMENT_N,
+    sheetCols: SHEET_COLS,
+    sheetCols2: SHEET_COLS * 2,
+    sampleCounts: SAMPLE_COUNTS.map(n => `${n}枚`).join("・"),
+    aspectChoices: Object.values(ASPECTS).map(a => a.label).join("・"),
+    aspectDefault: ASPECTS[ASPECT_DEFAULT].label,
+  };
+  document.querySelectorAll("[data-fill]").forEach(el => { el.textContent = values[el.dataset.fill]; });
+}
+
+/* ==================================================================
+   ドラッグによる順位の移動
+   一覧の画像をつかんで、他の画像の間へ直接運ぶ。動かせる範囲は ←→ボタンと同じ（movableRange）。
+   ドラッグ中は見た目の並び（drag.order）だけを動かし、離したときに moveImage で確定する
+   ================================================================== */
+let drag = null; // ドラッグ中なら { id, order: 見た目上の並び, band: 入れ替えられる相手の id の集合 }
+
+function startDrag(id, li) {
+  const order = canonicalOrder();
+  const range = movableRange(id, order);
+  if (!range) return false;
+  const band = new Set(order.slice(range.lo, range.hi + 1));
+  band.delete(id);
+  drag = { id, order, band };
+  li.classList.add("dragging");
+  return true;
+}
+
+/* targetId のカードの左半分に来ていれば手前へ、右半分なら後ろへ、カードと見た目上の並びを動かす */
+function moveDragTo(targetId, clientX) {
+  if (targetId === drag.id || !drag.band.has(targetId)) return;
+  const list = $("list");
+  const draggedLi = list.querySelector(`[data-id="${drag.id}"]`);
+  const targetLi = list.querySelector(`[data-id="${targetId}"]`);
+  if (!draggedLi || !targetLi) return;
+
+  const rect = targetLi.getBoundingClientRect();
+  const before = clientX < rect.left + rect.width / 2;
+  targetLi.insertAdjacentElement(before ? "beforebegin" : "afterend", draggedLi);
+
+  drag.order = drag.order.filter(x => x !== drag.id);
+  const targetIndex = drag.order.indexOf(targetId);
+  drag.order.splice(before ? targetIndex : targetIndex + 1, 0, drag.id);
+}
+
+function finishDrag() {
+  const { id, order } = drag;
+  drag = null;
+  if (!moveImage(id, order.indexOf(id))) render();
+}
+
+function cancelDrag() {
+  drag = null;
   render();
 }
 
-/* 誤操作防止：1回目はボタンの上に確認の吹き出しを出すだけで、ms ミリ秒以内の2回目で実行する。
-   ボタンの文字は変えないので、ボタンの幅も変わらない。
-   noConfirmNeeded() が true のときは確認せずにすぐ実行する */
+/* ==================================================================
+   吹き出しメニュー
+   一度に開くのは1つだけ。メニューと、それを開いたボタンの外を押すと閉じる
+   ================================================================== */
+let openPopup = null; // 開いているなら { menu, anchor }
+
+function showPopup(menu, anchor) {
+  hidePopup();
+  menu.hidden = false;
+  openPopup = { menu, anchor };
+}
+
+function hidePopup() {
+  if (openPopup) openPopup.menu.hidden = true;
+  openPopup = null;
+}
+
+function togglePopup(menu, anchor, fill) {
+  if (openPopup && openPopup.menu === menu) { hidePopup(); return; }
+  fill();
+  showPopup(menu, anchor);
+}
+
+/* メニューの中身を、ボタンの一覧で作り直す。options は { text, current, onClick } の配列 */
+function fillMenu(box, options) {
+  box.textContent = "";
+  for (const opt of options) {
+    const b = document.createElement("button");
+    b.textContent = opt.text;
+    if (opt.current) b.classList.add("current");
+    b.addEventListener("click", () => { hidePopup(); opt.onClick(); });
+    box.append(b);
+  }
+}
+
+/* 位置が固定されていないメニューを、押したボタンのすぐ下に出す。画面からはみ出すときは内側へ寄せる */
+function showPopupBelow(menu, anchor) {
+  showPopup(menu, anchor);
+  const rect = anchor.getBoundingClientRect();
+  const top = Math.min(rect.bottom + MENU_GAP, window.innerHeight - menu.offsetHeight - MENU_MARGIN);
+  const left = Math.min(rect.left, window.innerWidth - menu.offsetWidth - MENU_MARGIN);
+  menu.style.top = `${Math.max(MENU_MARGIN, top)}px`;
+  menu.style.left = `${Math.max(MENU_MARGIN, left)}px`;
+}
+
+/* サンプルの枚数。SAMPLE_COUNTS のうち、実際にその枚数以上が用意されているものだけを出す */
+function fillSampleMenu() {
+  fillMenu($("sampleMenuOptions"), SAMPLE_COUNTS.filter(n => n <= sampleList.length).map(n => ({
+    text: `${n}枚`, onClick: () => loadSamples(n),
+  })));
+  $("sampleMenuNote").hidden = !ids().length;
+}
+
+/* 縦横比。今選ばれているものに ✓ を付ける */
+function fillResizeMenu() {
+  fillMenu($("resizeMenuOptions"), Object.entries(ASPECTS).map(([key, a]) => ({
+    text: (state.aspect === key ? "✓ " : "") + a.label, onClick: () => setAspect(key),
+  })));
+}
+
+/* 画像のTierを選ぶメニュー */
+function openTierMenu(id, anchor) {
+  const range = allowedTierRange(id);
+  if (!range) return;
+  const choices = [null];
+  for (let t = range.min; t <= Math.min(range.max, tierMenuMax()); t++) choices.push(t);
+  fillMenu($("tierMenuOptions"), choices.map(t => ({
+    text: t === null ? "未定にする" : `Tier ${t}`, current: tierOf(id) === t, onClick: () => setTier(id, t),
+  })));
+  showPopupBelow($("tierMenu"), anchor);
+}
+
+/* Tierの箱を挿入する位置を選ぶメニュー */
+function openTierAddMenu(anchor) {
+  const n = state.tierCount;
+  const label = pos => pos === 0 ? "Tier 1 の上に追加"
+    : pos === n ? `Tier ${n} の下に追加`
+    : `Tier ${pos} と Tier ${pos + 1} の間に追加`;
+  const options = [];
+  for (let pos = 0; pos <= n; pos++) options.push({ text: label(pos), onClick: () => insertTier(pos) });
+  fillMenu($("tierAddMenuOptions"), options);
+  showPopupBelow($("tierAddMenu"), anchor);
+}
+
+/* ==================================================================
+   ダイアログ
+   ================================================================== */
+const openModal  = id => { hidePopup(); $(id).hidden = false; };
+const closeModal = id => { $(id).hidden = true; };
+const openedModal = () => document.querySelector(".modal-overlay:not([hidden])");
+
+/* ==================================================================
+   2回押しの確認
+   1回目はボタンの下に確認の吹き出しを出すだけで、ms ミリ秒以内にもう一度押すと実行する。
+   noConfirmNeeded() が true のときは確認せずにすぐ実行する
+   ================================================================== */
 function confirmTwice(button, confirmText, action, ms = CONFIRM_MS, noConfirmNeeded = () => false) {
   let timer = null, tip = null;
   const clearTip = () => { clearTimeout(timer); timer = null; if (tip) { tip.remove(); tip = null; } };
@@ -1781,1042 +2581,137 @@ function confirmTwice(button, confirmText, action, ms = CONFIRM_MS, noConfirmNee
 }
 
 /* ==================================================================
-   保存ファイルの書き出しと読み込み
+   イベントの登録
    ================================================================== */
-const blobToDataURL = blob => new Promise((resolve, reject) => {
-  const reader = new FileReader();
-  reader.onload  = () => resolve(reader.result);
-  reader.onerror = reject;
-  reader.readAsDataURL(blob);
-});
-
-function dataURLToBlob(dataURL) {
-  const [meta, base64] = dataURL.split(",");
-  const type = (meta.match(/data:([^;]+)/) || [])[1] || "image/jpeg";
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return new Blob([bytes], { type });
-}
-
-/* 保存場所を選べるブラウザ（File System Access API に対応したもの）ではその場で尋ね、
-   claude.ai 上では downloads 機能、それ以外では通常のダウンロードにフォールバックする */
-async function downloadFile(filename, blob) {
-  if (typeof window.showSaveFilePicker === "function") {
-    const ext = (filename.match(/\.([^.]+)$/) || [, ""])[1];
-    try {
-      const handle = await window.showSaveFilePicker({
-        suggestedName: filename,
-        types: ext ? [{ description: ext.toUpperCase(), accept: { [blob.type || "application/octet-stream"]: ["." + ext] } }] : undefined,
-      });
-      const writable = await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-      return;
-    } catch (e) {
-      if (e && e.name === "AbortError") { const err = new Error("cancelled"); err.code = "declined"; throw err; }
-      // 対応していないはずが失敗した場合は、下の方法にフォールバックする
-    }
-  }
-
-  const claudeDownloads = window.claude && window.claude.use
-    ? await window.claude.use("downloads").catch(() => null)
-    : null;
-  if (claudeDownloads) {
-    await claudeDownloads.save({ filename, data: blob });
-    return;
-  }
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = filename;
-  document.body.append(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(link.href), DOWNLOAD_URL_MS);
-}
-
-/* タイトルを反映したファイル名を作る。「タイトル未入力なら既定の名前」という扱い */
-function titledFilename(ext) {
-  const d = new Date(), pad = x => String(x).padStart(2, "0");
-  const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
-  const title = (state.title || "").trim();
-  const base = title ? `${title}ランキング` : "ranking";
-  return `${base}-${stamp}.${ext}`;
-}
-
-async function exportData() {
-  if (!allIds().length) { showMessage("保存するデータがありません"); return; }
-  showMessage("書き出し中…");
-
-  const records = (await db("images", "readonly", s => s.getAll())) || [];
-  const images = {};
-  for (const rec of records) {
-    if (state.ratings[rec.id]) images[rec.id] = await blobToDataURL(rec.blob);
-  }
-
-  const filename = titledFilename("json");
-  const data = { app: "pairsort", savedAt: new Date().toISOString(), state, images };
-
-  try {
-    await downloadFile(filename, new Blob([JSON.stringify(data)], { type: "application/json" }));
-    showMessage("保存しました");
-  } catch (e) {
-    showMessage(e && e.code === "declined" ? "保存をキャンセルしました" : "保存できませんでした");
-  }
-}
-
-async function importData(file) {
-  let data;
-  try {
-    data = JSON.parse(await file.text());
-  } catch (e) {
-    showMessage("ファイルを読み込めませんでした");
-    return;
-  }
-  const valid = data && data.app === "pairsort" && data.state && data.state.version === SAVE_VERSION && data.images;
-  if (!valid) { showMessage("このツールの保存ファイルではありません"); return; }
-
-  Object.values(urls).forEach(u => URL.revokeObjectURL(u));
-  for (const k in urls) delete urls[k];
-  await db("images", "readwrite", s => s.clear());
-
-  for (const [id, dataURL] of Object.entries(data.images)) {
-    const blob = dataURLToBlob(dataURL);
-    urls[id] = URL.createObjectURL(blob);
-    await db("images", "readwrite", s => s.put({ id, blob }));
-    if (data.state.hashes && data.state.hashes[id]) continue; // 保存データに既にハッシュがあればそれを使う
-    data.state.hashes = data.state.hashes || {};
-    data.state.hashes[id] = await hashBlob(blob);
-  }
-
-  state = data.state;
-  state.hist = state.hist || [];
-  state.title = state.title || "";
-  state.resizeRatio = state.resizeRatio || RESIZE_DEFAULT;
-  state.hashes = state.hashes || {};
-  applyImageAspectCSS();
-  cleanUpState();
-  // 古いファイルは、レートの並びがTierやロックと食い違っていることがあるので、読み込み直後に整える
-  normalizeRatings();
-  $("titleInput").value = state.title;
-  document.title = state.title.trim() ? `${state.title.trim()}ランキング` : "二択式ランキングメーカー";
-  pair = null;
-  saveState();
-  render();
-  showMessage(`${allIds().length}件を読み込みました`);
-}
-
-/* 画像のないデータや、存在しない画像を指す履歴を取り除く */
-function cleanUpState() {
-  for (const id of Object.keys(state.names)) {
-    if (!urls[id]) { delete state.names[id]; delete state.ratings[id]; }
-  }
-  for (const id of Object.keys(state.ratings)) {
-    if (!(id in state.names)) delete state.ratings[id];
-  }
-  for (const id of Object.keys(state.ratings)) {
-    if (state.ratings[id].w === undefined) state.ratings[id].w = 0; // 古い保存データの互換
-    if (state.ratings[id].tier === undefined) state.ratings[id].tier = null; // 古い保存データの互換（旧ロックは引き継がない）
-    if (state.ratings[id].locked === undefined) state.ratings[id].locked = false;
-  }
-  if (state.tierMax === undefined) state.tierMax = Math.max(TIER_MAX_DEFAULT, maxTier()); // 古い保存データの互換
-  // 古い保存データ用に、ロック中なのにどちらの端かの記録（lockZone）が無い画像を補う
-  if (allIds().some(id => state.ratings[id].locked && !state.ratings[id].lockZone)) {
-    const order = makeRanking().order;
-    let i = 0;
-    while (i < order.length && isLocked(order[i])) { state.ratings[order[i]].lockZone = "top"; i++; }
-    let j = order.length - 1;
-    while (j >= i && isLocked(order[j])) { state.ratings[order[j]].lockZone = "bottom"; j--; }
-  }
-  if (!state.hashes) state.hashes = {}; // 古い保存データの互換
-  for (const id of Object.keys(state.hashes)) {
-    if (!(id in state.ratings)) delete state.hashes[id];
-  }
-  delete state.lockedTop;    // 旧ロック機能の名残。Tierには引き継がない
-  delete state.lockedBottom;
-  state.hist = state.hist.filter(h => state.ratings[h.a] && state.ratings[h.b]);
-}
-
-
-/* ==================================================================
-   Tier表シートの書き出し
-   Tierごとに、横10列で折り返しながら並べた1枚のPNG画像を作る。
-   Tierが未定の画像は含めない。強さなどの数値は入れず、画像と順位番号だけを載せる
-   ================================================================== */
-const SHEET_COLS = 10;
-const SHEET_CELL_W = 140; // 高さは、そのとき選ばれているリサイズ比率から決める（buildSheet内のcellH）
-const SHEET_LABEL_W = 110;
-const SHEET_LINE = pal("ash-500");   // 行や列を仕切る線
-const SHEET_BG = pal("black");     // 背景
-
-function loadImageElement(src) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
-}
-
-/* object-fit: cover と同じ考え方で、枠いっぱいに敷き詰めるように描く */
-function drawCover(ctx, img, x, y, w, h) {
-  const scale = Math.max(w / img.width, h / img.height);
-  const dw = img.width * scale, dh = img.height * scale;
-  ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
-}
-
-const SHEET_TITLE_H = 64; // タイトルを入れたときの帯の高さ(px)
-const SHEET_TITLE_PAD = 20; // タイトル文字の左の余白(px)
-const SHEET_FONT = "'Zen Kaku Gothic New', sans-serif";
-const SHEET_TITLE_SIZE = 32;  // 文字の大きさ(px)：タイトル
-const SHEET_LABEL_SIZE = 26;  //                  ：行の見出し
-const SHEET_RANK_SIZE  = 13;  //                  ：画像の左上の順位番号
-const SHEET_RANK_BOX_W = 30, SHEET_RANK_BOX_H = 22; // 順位番号の下に敷く黒い四角の大きさ(px)
-const SHEET_RANK_BOX_ALPHA = 0.65;                  // その黒の濃さ
-const SHEET_RANK_TEXT_X = 6, SHEET_RANK_TEXT_Y = 16; // 四角の左上から見た、番号の書き出し位置(px)
-
-/* 現在の順位を、各Tierの最上位（最初に出てくる順位）だけを基準にグループ分けする。
-   一番手前のTierより上の未定はそのTierとして、Tier同士の間の未定は手前のTierとして、
-   一番後ろのTierより下の未定はそのTierとして扱う。Tierが1つも無ければ空の配列を返す。
-   Tierシートの行分けと、Tierごとの内訳表示の両方から使う */
-function tierGroups(order) {
-  const tops = {}; // tier番号 -> 最初に出てくる順位（インデックス）
-  order.forEach((id, i) => {
-    const t = getTier(id);
-    if (t === null || t in tops) return;
-    tops[t] = i;
-  });
-  const tiers = Object.keys(tops).map(Number).sort((a, b) => a - b);
-  if (!tiers.length) return [];
-
-  const groups = [];
-  for (let k = 0; k < tiers.length; k++) {
-    const t = tiers[k];
-    const start = k === 0 ? 0 : tops[t]; // 一番手前のTierだけ、リストの先頭まで範囲を広げる
-    const end = k === tiers.length - 1 ? order.length - 1 : tops[tiers[k + 1]] - 1; // 一番後ろのTierだけ、末尾まで広げる
-    groups.push({ tier: t, ids: order.slice(start, end + 1) });
-  }
-  return groups;
-}
-
-function buildTierRows(ranking, tierNames) {
-  const groups = tierGroups(ranking.order);
-
-  const rows = [];
-  for (const g of groups) {
-    const label = g.tier === null ? "未定" : (tierNames && tierNames[g.tier]) || `Tier ${g.tier}`;
-    const color = g.tier === null ? pal("black") : tierColor(g.tier, state.tierMax);
-    const rowsInGroup = Math.ceil(g.ids.length / SHEET_COLS);
-    for (let i = 0; i < g.ids.length; i += SHEET_COLS) {
-      rows.push({ ids: g.ids.slice(i, i + SHEET_COLS), label, color, groupStart: i === 0, groupSpan: rowsInGroup });
-    }
-  }
-  return rows;
-}
-
-/* Tierが1つも無いときの、これまでどおりの並び。10位刻みでTopの見出しを付け、
-   最後の行が10枚に満たなくても見出しは10の倍数に切り上げる。色は行の位置で虹色に変える */
-function buildTopNRows(order) {
-  const rowCount = Math.ceil(order.length / SHEET_COLS);
-  const rows = [];
-  for (let r = 0; r < rowCount; r++) {
-    const ids = order.slice(r * SHEET_COLS, r * SHEET_COLS + SHEET_COLS);
-    rows.push({ ids, label: `Top${(r + 1) * SHEET_COLS}`, color: tierColor(r + 1, rowCount), groupStart: true, groupSpan: 1 });
-  }
-  return rows;
-}
-
-/* Tier表シートを1枚の画像に描いて PNG にする。タイトル、行の見出し、画像、マス目の線の順に重ねて描く */
-async function buildSheet(rows, ranking, title) {
-  const cellH    = Math.round(SHEET_CELL_W / currentAspect()); // 今のリサイズ比率に合わせた1マスの高さ
-  const rowCount = rows.length;
-  const width    = SHEET_LABEL_W + SHEET_COLS * SHEET_CELL_W;
-  const titleH   = title ? SHEET_TITLE_H : 0;
-  const height   = titleH + rowCount * cellH;
-  const layout   = { cellH, rowCount, width, titleH, height };
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = SHEET_BG;
-  ctx.fillRect(0, 0, width, height);
-
-  if (title) drawSheetTitle(ctx, title, titleH);
-  drawSheetLabels(ctx, rows, layout);
-  await drawSheetImages(ctx, rows, ranking, layout);
-  drawSheetGrid(ctx, rows, layout);
-
-  return new Promise(resolve => canvas.toBlob(resolve, "image/png"));
-}
-
-/* シートの一番上のタイトル */
-function drawSheetTitle(ctx, title, titleH) {
-  ctx.fillStyle = pal("white");
-  ctx.font = `bold ${SHEET_TITLE_SIZE}px ${SHEET_FONT}`;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  ctx.fillText(title, SHEET_TITLE_PAD, titleH / 2);
-  ctx.textBaseline = "alphabetic";
-}
-
-/* 行の左の見出し（Tier名やTop10など）と、その背景色 */
-function drawSheetLabels(ctx, rows, { cellH, rowCount, titleH }) {
-  // 見出し。同じTierが複数行にまたがるときは、その行数ぶんの高さでまとめて1回だけ描き、
-  // 縦方向の中央にラベルを置く（背景色もその高さぶん途切れなく塗る）
-  for (let r = 0; r < rowCount; r++) {
-    if (!rows[r].groupStart) continue;
-    const { label, color, groupSpan } = rows[r];
-    const y = titleH + r * cellH;
-    const h = groupSpan * cellH;
-    ctx.fillStyle = color;
-    ctx.fillRect(0, y, SHEET_LABEL_W, h);
-    ctx.fillStyle = pal("white");
-    ctx.font = `bold ${SHEET_LABEL_SIZE}px ${SHEET_FONT}`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(label, SHEET_LABEL_W / 2, y + h / 2);
-    ctx.textAlign = "left";
-    ctx.textBaseline = "alphabetic";
-  }
-}
-
-/* 各マスの画像と、左上の順位番号。読み込めない画像は灰色のマスにする */
-async function drawSheetImages(ctx, rows, ranking, { cellH, rowCount, titleH }) {
-  // 画像
-  for (let r = 0; r < rowCount; r++) {
-    const { ids } = rows[r];
-    const y = titleH + r * cellH;
-
-    for (let col = 0; col < ids.length; col++) {
-      const id = ids[col];
-      const x = SHEET_LABEL_W + col * SHEET_CELL_W;
-
-      try {
-        const img = await loadImageElement(urls[id]);
-        drawCover(ctx, img, x, y, SHEET_CELL_W, cellH);
-      } catch (e) {
-        ctx.fillStyle = pal("ash-700");
-        ctx.fillRect(x, y, SHEET_CELL_W, cellH);
-      }
-
-      // 画像の左上に小さく順位番号（全体の中での順位）
-      ctx.fillStyle = palAlpha("black", SHEET_RANK_BOX_ALPHA);
-      ctx.fillRect(x, y, SHEET_RANK_BOX_W, SHEET_RANK_BOX_H);
-      ctx.fillStyle = pal("white");
-      ctx.font = `bold ${SHEET_RANK_SIZE}px ${SHEET_FONT}`;
-      ctx.fillText(String(ranking.rank[id] + 1), x + SHEET_RANK_TEXT_X, y + SHEET_RANK_TEXT_Y);
-    }
-  }
-}
-
-/* マス目の線 */
-function drawSheetGrid(ctx, rows, { cellH, rowCount, width, titleH, height }) {
-  // マス目の線。太さ1pxで、座標を0.5pxずらして引くことで、
-  // 線がぼやけたり隣のマスの画像にはみ出したりしないようにする。
-  // 画像側はすべての行の境目に引くが、ラベル側は同じTierの中では引かず、Tierの区切りと上下端だけに引く
-  ctx.strokeStyle = SHEET_LINE;
-  ctx.lineWidth = 1;
-  for (let row = 0; row <= rowCount; row++) {
-    const y = titleH + row * cellH + 0.5;
-    ctx.beginPath(); ctx.moveTo(SHEET_LABEL_W, y); ctx.lineTo(width, y); ctx.stroke();
-    if (row === 0 || row === rowCount || rows[row].groupStart) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(SHEET_LABEL_W, y); ctx.stroke();
-    }
-  }
-  for (let col = 0; col <= SHEET_COLS; col++) {
-    const x = SHEET_LABEL_W + col * SHEET_CELL_W + 0.5;
-    ctx.beginPath(); ctx.moveTo(x, titleH); ctx.lineTo(x, height); ctx.stroke();
-  }
-  { const x = SHEET_LABEL_W + 0.5; ctx.beginPath(); ctx.moveTo(x, titleH); ctx.lineTo(x, height); ctx.stroke(); }
-}
-
-/* シートを実際に作る。tierNames は {tier番号: 名前} の対応表。省略時は「Tier N」のまま。
-   Tierが1つも無ければ、これまでどおりTop10・Top20…の並びにする */
-async function runExportSheets(tierNames) {
-  const ranking = makeRanking();
-  const rows = maxTier() === 0 ? buildTopNRows(ranking.order) : buildTierRows(ranking, tierNames);
-  if (!rows.length) { showMessage("画像がありません"); return; }
-  showMessage("シートを作成中…");
-
-  const title = (state.title || "").trim();
-  const blob = await buildSheet(rows, ranking, title ? `${title}ランキング` : "");
-  const filename = titledFilename("png");
-  try {
-    await downloadFile(filename, blob);
-    showMessage("シートを書き出しました");
-  } catch (e) {
-    showMessage("シートを保存できませんでした");
-  }
-}
-
-/* Tierの番号に、実際に使われている値の範囲内で抜けがあるかどうか */
-function hasTierGap() {
-  const used = [...new Set(allIds().map(id => getTier(id)).filter(t => t !== null))].sort((a, b) => a - b);
-  if (!used.length) return false;
-  return used[used.length - 1] - used[0] + 1 !== used.length;
-}
-
-/* 「シート作成」の入口。Tierに抜けがあれば先に詰めるかどうかを確認し、
-   Tierが1つもなければ、名前を聞かずそのまま作る */
-function exportSheets() {
-  if (hasTierGap() && !canEditTierBoxes()) {
-    showMessage("Tierの番号を詰める必要がありますが、ロック中は詰められません。ロックを解除してから作成してください");
-    return;
-  }
-  if (hasTierGap()) {
-    $("tierGapOverlay").hidden = false;
-    return;
-  }
-  proceedExportSheets();
-}
-
-function proceedExportSheets() {
-  const maxT = maxTier();
-  if (maxT === 0) { runExportSheets({}); return; }
-
-  $("tierNameQuestion").hidden = false;
-  $("tierNameForm").hidden = true;
-  $("tierNameOverlay").hidden = false;
-}
-
-function openTierNameForm() {
-  const maxT = maxTier();
-  const box = $("tierNameInputs");
-  box.textContent = "";
-  for (let t = 1; t <= maxT; t++) {
-    const row = document.createElement("div");
-    row.className = "tier-name-row";
-    const label = document.createElement("label");
-    label.textContent = `Tier ${t}`;
-    label.htmlFor = `tierNameInput${t}`;
-    const input = document.createElement("input");
-    input.type = "text";
-    input.id = `tierNameInput${t}`;
-    input.placeholder = `Tier ${t}`;
-    input.maxLength = TIER_NAME_MAX;
-    row.append(label, input);
-    box.append(row);
-  }
-  $("tierNameQuestion").hidden = true;
-  $("tierNameForm").hidden = false;
-}
-
-function collectTierNamesAndExport() {
-  const maxT = maxTier();
-  const names = {};
-  for (let t = 1; t <= maxT; t++) {
-    const v = $(`tierNameInput${t}`).value.trim();
-    if (v) names[t] = v;
-  }
-  $("tierNameOverlay").hidden = true;
-  runExportSheets(names);
-}
-
-$("tierNameSkip").addEventListener("click", () => { $("tierNameOverlay").hidden = true; runExportSheets({}); });
-$("tierNameYes").addEventListener("click", openTierNameForm);
-$("tierNameBack").addEventListener("click", () => { $("tierNameQuestion").hidden = false; $("tierNameForm").hidden = true; });
-$("tierNameGo").addEventListener("click", collectTierNamesAndExport);
-$("tierNameClose").addEventListener("click", () => { $("tierNameOverlay").hidden = true; });
-$("tierNameOverlay").addEventListener("click", e => { if (e.target === $("tierNameOverlay")) $("tierNameOverlay").hidden = true; });
-
-$("tierGapCancel").addEventListener("click", () => { $("tierGapOverlay").hidden = true; });
-$("tierGapOk").addEventListener("click", () => {
-  $("tierGapOverlay").hidden = true;
-  compactTiers();
-  saveState();
-  render();
-  proceedExportSheets();
-});
-$("tierGapClose").addEventListener("click", () => { $("tierGapOverlay").hidden = true; });
-$("tierGapOverlay").addEventListener("click", e => { if (e.target === $("tierGapOverlay")) $("tierGapOverlay").hidden = true; });
-
-/* ==================================================================
-   サンプル
-   samples/samples.json に [{"file": "01.jpg", "name": "表示名"}, ...] の形で一覧を書く。
-   一覧が読めないとき（claude.ai 上やファイル未配置のとき）はボタンを出さない
-   ================================================================== */
-let sampleList = [];
-const SAMPLE_TIERS = [20, 50, 100]; // ここに用意した件数の段階を書く
-
-async function prepareSamples() {
-  try {
-    const res = await fetch(SAMPLE_DIR + "samples.json", { cache: "no-cache" });
-    if (!res.ok) return;
-    const list = await res.json();
-    if (Array.isArray(list) && list.length) {
-      sampleList = list;
-      $("samplePicker").hidden = false;
-    }
-  } catch (e) {
-    // サンプルなしで動かす
-  }
-}
-
-/* サンプルの件数メニューを、用意されている枚数に合わせて作る。
-   20・50・100のうち、実際にその枚数以上が用意されているものだけを出す */
-function renderSampleMenu() {
-  const tiers = SAMPLE_TIERS.filter(n => n <= sampleList.length);
-
-  const box = $("sampleMenuOptions");
-  box.textContent = "";
-  tiers.forEach(n => {
-    const btn = document.createElement("button");
-    btn.textContent = `${n}枚`;
-    btn.addEventListener("click", () => { $("sampleMenu").hidden = true; loadSamples(n); });
-    box.append(btn);
-  });
-
-  $("sampleMenuNote").hidden = !allIds().length;
-}
-
-async function loadSamples(count) {
-  showMessage("サンプルを読み込み中…");
-  const entries = sampleList.slice(0, count);
-
-  // サンプルはあらかじめリサイズ済みなので、通常の追加処理（縮小のやり直し）を経由せず、
-  // 取得した画像をそのまま保存する。取得も1件ずつ待たず、まとめて並行に進める
-  let done = 0;
-  const total = entries.length;
-  setProgress(0, total);
-  const loaded = await Promise.all(entries.map(async entry => {
-    try {
-      const res = await fetch(SAMPLE_DIR + entry.file);
-      if (!res.ok) return null;
-      const blob = await res.blob();
-      return { blob, name: entry.name || entry.file.replace(/\.[^.]+$/, "") };
-    } catch (e) {
-      return null; // 読めない画像は飛ばす
-    } finally {
-      done++;
-      setProgress(done, total);
-    }
-  }));
-
-  const ok = loaded.filter(Boolean);
-  clearProgress();
-  if (!ok.length) { showMessage("サンプルを読み込めませんでした"); return; }
-
-  await deleteAll();
-  const p = ok.length > 1 ? PLACEMENT_N : 0;
-  const w = ok.length > 1 ? PLACEMENT_WIDE_N : 0;
-  for (const { blob, name } of ok) {
-    const id = newId();
-    urls[id] = URL.createObjectURL(blob);
-    await db("images", "readwrite", s => s.put({ id, blob }));
-    state.names[id] = name;
-    state.ratings[id] = newRating(RATING_START, { p, w });
-    state.hashes[id] = await hashBlob(blob);
-  }
-
-  message = "";
-  pair = null;
-  saveState();
-  render();
-}
-
-$("sampleBtn").addEventListener("click", () => {
-  $("resizeMenu").hidden = true;
-  const menu = $("sampleMenu");
-  if (menu.hidden) renderSampleMenu();
-  menu.hidden = !menu.hidden;
-});
-document.addEventListener("click", e => {
-  if (!$("samplePicker").contains(e.target)) $("sampleMenu").hidden = true;
-});
-
-/* リサイズ比率メニュー。新しく追加する画像だけに効き、今ある画像には遡って適用されない */
-function renderResizeMenu() {
-  const box = $("resizeMenuOptions");
-  box.textContent = "";
-  Object.keys(RESIZE_RATIOS).forEach(label => {
-    const btn = document.createElement("button");
-    const active = (state.resizeRatio || RESIZE_DEFAULT) === label;
-    btn.textContent = (active ? "✓ " : "") + label;
-    btn.addEventListener("click", () => {
-      state.resizeRatio = label;
-      applyImageAspectCSS();
-      saveState();
-      $("resizeMenu").hidden = true;
-    });
-    box.append(btn);
-  });
-}
-$("resizeBtn").addEventListener("click", () => {
-  $("sampleMenu").hidden = true;
-  const menu = $("resizeMenu");
-  if (menu.hidden) renderResizeMenu();
-  menu.hidden = !menu.hidden;
-});
-document.addEventListener("click", e => {
-  if (!$("resizePicker").contains(e.target)) $("resizeMenu").hidden = true;
-});
-
-/* 吹き出し menu を、押したボタン anchorEl のすぐ下に出す。画面からはみ出すときは内側へ寄せる */
-function placeMenuBelow(menu, anchorEl) {
-  menu.hidden = false;
-  const rect = anchorEl.getBoundingClientRect();
-  const top = Math.min(rect.bottom + MENU_GAP, window.innerHeight - menu.offsetHeight - MENU_MARGIN);
-  const left = Math.min(rect.left, window.innerWidth - menu.offsetWidth - MENU_MARGIN);
-  menu.style.top = `${Math.max(MENU_MARGIN, top)}px`;
-  menu.style.left = `${Math.max(MENU_MARGIN, left)}px`;
-}
-
-/* Tierを選ぶ吹き出し。クリックされたリボン/ボタンのすぐ下に出す */
-function openTierMenu(id, anchorEl) {
-  const ceiling = tierCeiling();
-  const range = allowedTierRange(id) || { min: 1, max: 0 };
-  const options = [null, ...Array.from({ length: ceiling }, (_, i) => i + 1).filter(t => t >= range.min && t <= range.max)];
-  const box = $("tierMenuOptions");
-  box.textContent = "";
-  options.forEach(opt => {
-    const b = document.createElement("button");
-    b.textContent = opt === null ? "未定にする" : `Tier ${opt}`;
-    if (getTier(id) === opt) b.classList.add("current");
-    b.addEventListener("click", () => { $("tierMenu").hidden = true; setTier(id, opt); });
-    box.append(b);
-  });
-
-  placeMenuBelow($("tierMenu"), anchorEl);
-}
-document.addEventListener("click", e => {
-  if (!$("tierMenu").contains(e.target) && !e.target.classList.contains("tier-ribbon")) {
-    $("tierMenu").hidden = true;
-  }
-});
-
-/* Tierの箱を挿入する位置を選ぶ吹き出し */
-function tierAddLabel(pos, tierMax) {
-  if (pos === 0) return "Tier 1 の上に追加";
-  if (pos === tierMax) return `Tier ${tierMax} の下に追加`;
-  return `Tier ${pos} と Tier ${pos + 1} の間に追加`;
-}
-
-function openTierAddMenu(anchorEl) {
-  const box = $("tierAddMenuOptions");
-  box.textContent = "";
-  for (let pos = 0; pos <= state.tierMax; pos++) {
-    const b = document.createElement("button");
-    b.textContent = tierAddLabel(pos, state.tierMax);
-    b.addEventListener("click", () => { $("tierAddMenu").hidden = true; insertTier(pos); });
-    box.append(b);
-  }
-
-  placeMenuBelow($("tierAddMenu"), anchorEl);
-}
-$("tierAddBtn").addEventListener("click", () => {
-  if ($("tierAddBtn").disabled) return;
-  openTierAddMenu($("tierAddBtn"));
-});
-document.addEventListener("click", e => {
-  if (!$("tierAddMenu").contains(e.target) && !$("tierAddBtn").contains(e.target)) {
-    $("tierAddMenu").hidden = true;
-  }
-});
-
-$("compactTiersBtn").addEventListener("click", () => {
-  compactTiers();
-  saveState();
-  render();
-});
-
-/* ==================================================================
-   画面の描画
-   ================================================================== */
-let messageTimer = null;
-let message = "";
-
-function showMessage(text) {
-  message = text;
-  render(true);
-  clearTimeout(messageTimer);
-  messageTimer = setTimeout(() => { message = ""; render(true); }, MESSAGE_MS);
-}
-
-/* 何枚中どこまで終わったかを示す進捗バー。addImages と loadSamples から使う */
-function setProgress(done, total) {
-  $("progressTrack").hidden = false;
-  $("progressLabel").hidden = false;
-  $("progressBar").style.width = `${total ? Math.round((done / total) * 100) : 0}%`;
-  $("progressLabel").textContent = `${done} / ${total} 件`;
-}
-function clearProgress() {
-  $("progressTrack").hidden = true;
-  $("progressLabel").hidden = true;
-}
-
-/* 配置比較の完了など、見落としたくない知らせは、上部の小さな文字ではなく
-   はっきりしたポップアップで出す */
-let toastTimer = null;
-function showToast(text) {
-  const el = $("toast");
-  el.hidden = false;
-  el.textContent = text;
-  requestAnimationFrame(() => el.classList.add("show"));
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => {
-    el.classList.remove("show");
-    setTimeout(() => { el.hidden = true; }, TOAST_FADE_MS);
-  }, TOAST_MS);
-}
-
-/* 画面表示用の順位。canonicalOrder の並び順に、各画像の順位番号（rank）と、
-   レートを強さ 0〜100（平均的なレートの相手への予想勝率）に換算する関数（toPower）を添えて返す */
-function makeRanking() {
-  const ids = allIds();
-  const avg = mean(ids.map(id => state.ratings[id].r));
-  const order = canonicalOrder();
-  const rank = {};
-  order.forEach((id, i) => { rank[id] = i; });
-  const toPower = r => Math.round(100 * expectedWin(r, avg));
-  return { order, rank, toPower };
-}
-
-function powerText(id, ranking) {
-  const item = state.ratings[id];
-  const rd = currentRD(item);
-  const p = ranking.toPower;
-  return `強さ ${p(item.r)}（${p(item.r - rd)}〜${p(item.r + rd)}）`;
-}
-
-const placementText = item => `配置比較中 ${PLACEMENT_N - item.p}/${PLACEMENT_N}`;
-
-function renderStatus() {
-  const ids = allIds();
-  const placing = ids.filter(id => state.ratings[id].p > 0).length;
-  let text = "";
-  if (ids.length) {
-    text = `登録 ${ids.length}件　比較 ${state.t}回`;
-    if (placing) text += `　配置比較中 ${placing}件`;
-    if (ids.length >= 2 && allIds().filter(id => !isLocked(id) && hasPartner(id)).length < 2) text += "。比較できる組み合わせがありません";
-  }
-  if (!storageOK) text += "。この環境では保存できないため、閉じると消えます";
-  $("status").textContent = message || text;
-}
-
-function renderArena(ranking) {
-  $("arena").hidden = !pair;
-  if (!pair) return;
-
-  for (const [card, deleteBtn, id] of [
-    [$("leftCard"), $("leftDeleteBtn"), pair[0]],
-    [$("rightCard"), $("rightDeleteBtn"), pair[1]],
-  ]) {
-    const item = state.ratings[id];
-    card.querySelector("img").src = urls[id] || "";
-    card.querySelector("img").alt = state.names[id] || "";
-    card.querySelector(".name").textContent = showNames ? (state.names[id] || "") : "";
-    card.querySelector(".power").textContent = !showPower ? ""
-      : item.p > 0 ? placementText(item)
-      : `${powerText(id, ranking)}・${ranking.rank[id] + 1}位`;
-
-    // 一度も比較していない画像だけ、その場で消せる削除ボタンを出す
-    deleteBtn.hidden = item.n > 0;
-  }
-  $("powerBtn").textContent = showPower ? "強さを隠す" : "強さを表示";
-}
-
-/* 順位一覧のカード1枚。上から、Tierのリボン・画像・名前・強さ・操作ボタンの順に並べる */
-function makeListItem(id, index, ranking) {
-  const li = document.createElement("li");
-  li.className = "item";
-  li.dataset.id = id;
-  addDropTarget(li, id);
-  li.append(
-    makeTierRibbon(id),
-    makeThumb(id, index, li),
-    makeItemName(id),
-    makeItemMeta(id, ranking),
-    makeItemActions(id, index, ranking)
-  );
-  return li;
-}
-
-/* Tierのリボン。未定なら灰色の「Tierを設定」、設定済みならTierの色で番号を出す。押すとTierを選ぶ吹き出しが開く */
-function makeTierRibbon(id) {
-  const ribbon = document.createElement("button");
-  const tier = getTier(id);
-  ribbon.className = "tier-ribbon" + (tier !== null ? " assigned" : "");
-  ribbon.textContent = tier !== null ? `Tier ${tier}` : "Tierを設定";
-  ribbon.style.background = tier !== null ? tierColor(tier, state.tierMax) : "";
-  ribbon.disabled = !canEdit(id);
-  ribbon.title = canEdit(id) ? "" : "ロック中はTierを変えられません";
-  ribbon.addEventListener("click", () => openTierMenu(id, ribbon));
-  return ribbon;
-}
-
-/* 左上に順位の番号を重ねた画像。ロックされていなければ、つかんでドラッグすると順位を動かせる */
-function makeThumb(id, index, li) {
-  const locked = isLocked(id);
-  const thumb = document.createElement("div");
-  thumb.className = "thumb";
-  thumb.draggable = !locked;
-  thumb.style.cursor = locked ? "default" : "grab";
-  thumb.title = locked ? "" : "ドラッグして順位を変える";
-  thumb.addEventListener("dragstart", e => {
-    if (!startDrag(id, li)) { e.preventDefault(); return; }
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", id);
-  });
-  thumb.addEventListener("dragend", () => { if (dragId === id) cancelDrag(); });
-
-  const badge = document.createElement("div");
-  badge.className = "rank";
-  badge.textContent = index + 1;
-
-  const img = document.createElement("img");
-  img.src = urls[id] || "";
-  img.alt = state.names[id] || "";
-  img.loading = "lazy";
-  thumb.append(badge, img);
-  return thumb;
-}
-
-/* カードを、ドラッグ中の画像の置き場所として使えるようにする */
-function addDropTarget(li, id) {
-  li.addEventListener("dragover", e => {
-    if (!dragId) return;
-    e.preventDefault();
-    e.stopPropagation();
-    moveDragTo(id, e.clientX);
-  });
-  li.addEventListener("drop", e => {
-    if (!dragId) return;
-    e.preventDefault();
-    e.stopPropagation();
-    finishDrag();
-  });
-}
-
-/* 画像の名前。「名前を隠す」状態のときは空にする */
-function makeItemName(id) {
-  const name = document.createElement("div");
-  name.className = "name";
-  name.textContent = showNames ? (state.names[id] || "") : "";
-  return name;
-}
-
-/* 強さと比較回数。配置比較の途中なら、その進み具合を出す */
-function makeItemMeta(id, ranking) {
-  const item = state.ratings[id];
-  const meta = document.createElement("div");
-  meta.className = "meta";
-  meta.textContent = item.p > 0 ? placementText(item) : `${powerText(id, ranking)}・比較${item.n}回`;
-  return meta;
-}
-
-/* 削除・ロック（解除）・←・→ のボタン。←→ は、端の画像・Tierの違う相手・ロック中の画像とは押せない */
-function makeItemActions(id, index, ranking) {
-  const locked = isLocked(id);
-  const actions = document.createElement("div");
-  actions.className = "item-actions";
-
-  const deleteBtn = document.createElement("button");
-  deleteBtn.className = "danger";
-  deleteBtn.textContent = "削除";
-  deleteBtn.disabled = !canEdit(id);
-  confirmTwice(deleteBtn, "もう一度押すと削除", () => deleteImage(id));
-
-  const lockBtn = document.createElement("button");
-  lockBtn.className = "lock" + (locked ? " active" : "");
-  lockBtn.textContent = locked ? "解除" : "ロック";
-  lockBtn.title = locked ? "ロックを解除する" : "この位置までまとめてロックする";
-  lockBtn.addEventListener("click", () => toggleLock(id));
-
-  const leftBtn = document.createElement("button");
-  leftBtn.className = "move";
-  leftBtn.textContent = "←";
-  leftBtn.title = "ひとつ前の順位に入れ替える";
-  leftBtn.disabled = index === 0 || !tierCompatible(id, ranking.order[index - 1]) || locked || isLocked(ranking.order[index - 1]);
-  leftBtn.addEventListener("click", () => moveRank(id, -1));
-
-  const rightBtn = document.createElement("button");
-  rightBtn.className = "move";
-  rightBtn.textContent = "→";
-  rightBtn.title = "ひとつ後ろの順位に入れ替える";
-  rightBtn.disabled = index === ranking.order.length - 1 || !tierCompatible(id, ranking.order[index + 1]) || locked || isLocked(ranking.order[index + 1]);
-  rightBtn.addEventListener("click", () => moveRank(id, 1));
-
-  actions.append(deleteBtn, lockBtn, leftBtn, rightBtn);
-  return actions;
-}
-
-function renderList(ranking) {
-  const count = allIds().length;
-  $("listTitle").hidden = !count;
-  $("listTitle").textContent = `現在の順位（${count}件）`;
-  const list = $("list");
-  list.textContent = "";
-  ranking.order.forEach((id, i) => list.append(makeListItem(id, i, ranking)));
-}
-
-/* Tierごとの枚数。シート作成時と同じ挟み込みルールで、あるTierに挟まれた未定はそのTierとして数える */
-function renderTierBreakdown(ranking) {
-  const el = $("tierBreakdown");
-  if (maxTier() === 0 || !ranking.order.length) { el.hidden = true; return; }
-  const groups = tierGroups(ranking.order);
-  el.hidden = false;
-  el.textContent = groups.map(g => `${g.tier === null ? "未定" : `Tier${g.tier}`}: ${g.ids.length}枚`).join("　");
-}
-
-/* keepPair が true のときは、表示中の2枚を選び直さない */
-function render(keepPair = false) {
-  if (!keepPair && (!pair || !pair.every(id => state.ratings[id]))) pair = pickPair();
-  if (pair && !tierCompatible(pair[0], pair[1])) pair = null; // Tierの変更で食い違った組み合わせは残さない
-  const ranking = makeRanking();
-
-  $("undoBtn").disabled = !state.hist.length;
-  $("empty").hidden = allIds().length > 0;
-  $("tierAddBtn").disabled = state.tierMax >= TIER_MAX_CAP || !canEditTierBoxes();
-  $("compactTiersBtn").disabled = !canEditTierBoxes();
-  $("resetAllTiersBtn").disabled = !canEditTierBoxes();
-
-  renderStatus();
-  renderArena(ranking);
-  renderList(ranking);
-  renderTierBreakdown(ranking);
-}
-
-/* ==================================================================
-   イベント
-   ================================================================== */
-const helpOverlay = $("helpOverlay");
-$("helpBtn").addEventListener("click", () => { helpOverlay.hidden = false; });
-$("helpClose").addEventListener("click", () => { helpOverlay.hidden = true; });
-helpOverlay.addEventListener("click", e => { if (e.target === helpOverlay) helpOverlay.hidden = true; });
-
-$("titleInput").addEventListener("input", () => {
-  state.title = $("titleInput").value;
-  document.title = state.title.trim() ? `${state.title.trim()}ランキング` : "二択式ランキングメーカー";
-});
+// 見出しまわり
+$("helpBtn").addEventListener("click", () => openModal("helpOverlay"));
+$("titleInput").addEventListener("input", () => setTitle($("titleInput").value));
 $("titleInput").addEventListener("change", () => saveState());
 
+// ツールバー
 $("addBtn").addEventListener("click", () => $("imageInput").click());
 $("imageInput").addEventListener("change", e => { addImages(e.target.files); e.target.value = ""; });
-
-$("undoBtn").addEventListener("click", undo);
+$("resizeBtn").addEventListener("click", () => togglePopup($("resizeMenu"), $("resizeBtn"), fillResizeMenu));
 $("exportBtn").addEventListener("click", exportData);
-$("sheetBtn").addEventListener("click", exportSheets);
-
-// データがあるときだけ、上書きの確認をはさむ
+// 今のデータがあるときだけ、上書きの確認をはさむ
 confirmTwice($("importBtn"), "上書きされます。もう一度押す", () => $("importInput").click(), IMPORT_CONFIRM_MS,
-  () => allIds().length === 0);
+  () => ids().length === 0);
 $("importInput").addEventListener("change", e => {
   const file = e.target.files[0];
   e.target.value = "";
   if (file) importData(file);
 });
-
-confirmTwice($("resetBtn"), "もう一度押すと削除", deleteAll);
-confirmTwice($("resetAllRatingsBtn"), "もう一度押すと全初期化", resetAllRatings);
-confirmTwice($("resetAllTiersBtn"), "もう一度押すとTierを初期化", resetAllTiers);
-confirmTwice($("leftDeleteBtn"), "もう一度押すと削除", () => deleteImage(pair[0]));
-confirmTwice($("rightDeleteBtn"), "もう一度押すと削除", () => deleteImage(pair[1]));
-
-
-$("leftCard").addEventListener("click",  () => answer(RESULT.LEFT));
-$("rightCard").addEventListener("click", () => answer(RESULT.RIGHT));
-$("tieBtn").addEventListener("click",    () => answer(RESULT.TIE));
-$("powerBtn").addEventListener("click",  () => { showPower = !showPower; render(true); });
+$("sampleBtn").addEventListener("click", () => togglePopup($("sampleMenu"), $("sampleBtn"), fillSampleMenu));
+$("sheetBtn").addEventListener("click", exportSheets);
 $("nameBtn").addEventListener("click", () => {
   showNames = !showNames;
   $("nameBtn").textContent = showNames ? "名前を隠す" : "名前を表示";
-  render(true);
+  render();
+});
+confirmTwice($("resetAllRatingsBtn"), "もう一度押すと全初期化", resetAllRatings);
+confirmTwice($("deleteAllBtn"), "もう一度押すと削除", deleteAll);
+
+// 比較画面
+$("leftCard").addEventListener("click",  () => answer(SCORE.LEFT));
+$("rightCard").addEventListener("click", () => answer(SCORE.RIGHT));
+$("tieBtn").addEventListener("click",    () => answer(SCORE.TIE));
+$("undoBtn").addEventListener("click", undo);
+$("powerBtn").addEventListener("click", () => { showPower = !showPower; render(); });
+confirmTwice($("leftDeleteBtn"),  "もう一度押すと削除", () => deleteImage(pair[0]));
+confirmTwice($("rightDeleteBtn"), "もう一度押すと削除", () => deleteImage(pair[1]));
+
+// 順位一覧の下のTier用ボタン
+$("tierAddBtn").addEventListener("click", () => openTierAddMenu($("tierAddBtn")));
+$("compactTiersBtn").addEventListener("click", compactTiers);
+confirmTwice($("resetAllTiersBtn"), "もう一度押すとTierを初期化", resetAllTiers);
+
+// Tier名を付けるダイアログ
+$("tierNameSkip").addEventListener("click", () => { closeModal("tierNameOverlay"); runExportSheets({}); });
+$("tierNameYes").addEventListener("click", openTierNameForm);
+$("tierNameBack").addEventListener("click", () => { $("tierNameQuestion").hidden = false; $("tierNameForm").hidden = true; });
+$("tierNameGo").addEventListener("click", collectTierNamesAndExport);
+
+// Tier番号の抜けを確認するダイアログ
+$("tierGapCancel").addEventListener("click", () => closeModal("tierGapOverlay"));
+$("tierGapOk").addEventListener("click", () => {
+  closeModal("tierGapOverlay");
+  compactTiers();
+  askTierNamesThenExport();
 });
 
+// どのダイアログも、×か背景を押すと閉じる
+document.querySelectorAll(".modal-overlay").forEach(overlay => {
+  overlay.querySelector(".modal-close").addEventListener("click", () => { overlay.hidden = true; });
+  overlay.addEventListener("click", e => { if (e.target === overlay) overlay.hidden = true; });
+});
+
+// メニューの外を押すと閉じる
+document.addEventListener("click", e => {
+  if (openPopup && !openPopup.menu.contains(e.target) && !openPopup.anchor.contains(e.target)) hidePopup();
+});
+
+// キーボード操作
 document.addEventListener("mousemove", () => document.body.classList.remove("kbd"));
 document.addEventListener("keydown", e => {
-  if (e.target.tagName === "INPUT") return;
-  if (!helpOverlay.hidden) { if (e.key === "Escape") helpOverlay.hidden = true; return; }
-  if (!$("tierNameOverlay").hidden) { if (e.key === "Escape") $("tierNameOverlay").hidden = true; return; }
   const key = e.key;
-  if (key === "ArrowLeft" || key === "ArrowRight" || key === "ArrowDown") document.body.classList.add("kbd");
-  // ショートカットのキーを押すと、直前にマウスで押したボタンにフォーカスの青枠が出て残り続けるので、フォーカスを外しておく
-  if (["ArrowLeft", "ArrowRight", "ArrowDown", "z", "Z"].includes(key) && document.activeElement && document.activeElement !== document.body) {
-    document.activeElement.blur();
+  // Escape：開いているダイアログかメニューを閉じる
+  if (key === "Escape") {
+    const modal = openedModal();
+    if (modal) modal.hidden = true;
+    else hidePopup();
+    return;
   }
-  if (pair && key === "ArrowLeft")  { e.preventDefault(); answer(RESULT.LEFT); }
-  else if (pair && key === "ArrowRight") { e.preventDefault(); answer(RESULT.RIGHT); }
-  else if (pair && key === "ArrowDown")  { e.preventDefault(); answer(RESULT.TIE); }
-  else if (key === "z" || key === "Z") undo();
+  // ダイアログを開いている間と、文字の入力中は、ショートカットを受け付けない
+  if (openedModal() || e.target.tagName === "INPUT") return;
+
+  const shortcuts = { ArrowLeft: () => answer(SCORE.LEFT), ArrowRight: () => answer(SCORE.RIGHT), ArrowDown: () => answer(SCORE.TIE), z: undo, Z: undo };
+  if (!shortcuts[key]) return;
+  // 直前にマウスで押したボタンにフォーカスの青い枠が残り続けないよう、フォーカスを外す
+  if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+  if (key.startsWith("Arrow")) {
+    if (!pair) return;
+    e.preventDefault();
+    document.body.classList.add("kbd");
+  }
+  shortcuts[key]();
 });
 
-window.addEventListener("dragover", e => { e.preventDefault(); document.body.classList.add("dragging"); });
-window.addEventListener("dragleave", e => { if (!e.relatedTarget) document.body.classList.remove("dragging"); });
+/* ページへのドラッグ＆ドロップ。画像ファイルなら追加し、一覧の画像のドラッグなら順位の移動を確定する */
+const isFileDrag = e => e.dataTransfer && Array.from(e.dataTransfer.types).includes("Files");
+window.addEventListener("dragover", e => {
+  e.preventDefault();
+  if (!drag && isFileDrag(e)) document.body.classList.add("dragging-files");
+});
+window.addEventListener("dragleave", e => { if (!e.relatedTarget) document.body.classList.remove("dragging-files"); });
 window.addEventListener("drop", e => {
   e.preventDefault();
-  document.body.classList.remove("dragging");
-  addImages(e.dataTransfer.files);
+  document.body.classList.remove("dragging-files");
+  if (drag) finishDrag();
+  else addImages(e.dataTransfer.files);
 });
-
-/* ==================================================================
-   旧版データの移行
-   比較ログから Bradley–Terry モデルで強さを一度だけ推定し、レートの初期値にする
-   ================================================================== */
-function migrateOldState(saved) {
-  const names = saved.names || {};
-  let comps = saved.comps;
-  if (!comps && saved.ranked) {
-    comps = [];
-    for (let i = 0; i + 1 < saved.ranked.length; i++) comps.push([saved.ranked[i], saved.ranked[i + 1]]);
-  }
-  comps = (comps || []).filter(c => c[0] in names && c[1] in names);
-
-  const ids = Object.keys(names);
-  const index = {};
-  ids.forEach((id, i) => { index[id] = i; });
-  const strength = ids.map(() => 1), wins = ids.map(() => 1), count = ids.map(() => 0);
-
-  for (const [a, b, tie] of comps) {
-    if (tie) { wins[index[a]] += 0.5; wins[index[b]] += 0.5; } else wins[index[a]]++;
-    count[index[a]]++;
-    count[index[b]]++;
-  }
-  for (let iter = 0; iter < MIGRATE_ITERATIONS; iter++) {
-    const denom = strength.map(s => 2 / (s + 1));
-    for (const [a, b] of comps) {
-      const i = index[a], j = index[b], v = 1 / (strength[i] + strength[j]);
-      denom[i] += v;
-      denom[j] += v;
-    }
-    for (let i = 0; i < ids.length; i++) strength[i] = wins[i] / denom[i];
-  }
-
-  const next = emptyState();
-  next.names = names;  ids.forEach((id, i) => {
-    next.ratings[id] = newRating(RATING_START + 400 * Math.log10(strength[i]), { rd: MIGRATE_RD, n: count[i], p: 0, w: 0, last: 0 });
-  });
-  return next;
-}
 
 /* ==================================================================
    起動
    ================================================================== */
 (async () => {
+  fillTexts();
   const saved = await db("kv", "readonly", s => s.get("state"));
   if (saved && saved.version === SAVE_VERSION) state = saved;
-  else if (saved && saved.names) state = migrateOldState(saved);
 
   const records = (await db("images", "readonly", s => s.getAll())) || [];
-  for (const rec of records) urls[rec.id] = URL.createObjectURL(rec.blob);
-
-  cleanUpState();
-  state.resizeRatio = state.resizeRatio || RESIZE_DEFAULT;
-  applyImageAspectCSS();
-  $("titleInput").value = state.title || "";
-  if (state.title && state.title.trim()) document.title = `${state.title.trim()}ランキング`;
-  saveState();
-  render();
-  prepareSamples();
-
-  // 前のバージョンから引き継いだ画像にはハッシュが無いので、後から追加する画像との
-  // 重複検出に使えるよう、表示を止めずに裏側で計算しておく
-  const missing = records.filter(rec => state.ratings[rec.id] && !state.hashes[rec.id]);
-  if (missing.length) {
-    const hashes = await Promise.all(missing.map(rec => hashBlob(rec.blob)));
-    missing.forEach((rec, i) => { state.hashes[rec.id] = hashes[i]; });
-    saveState();
+  for (const rec of records) {
+    if (state.images[rec.id]) imageUrls[rec.id] = URL.createObjectURL(rec.blob);
   }
+  // どの画像の記録にも結びついていない画像を、保存場所から片付ける
+  const unused = records.filter(rec => !state.images[rec.id]).map(rec => rec.id);
+  if (storageOK && unused.length) db("images", "readwrite", s => unused.forEach(id => s.delete(id)));
+  dropImagesWithoutData();
+
+  applyAspectCSS();
+  $("titleInput").value = state.title;
+  updateDocumentTitle();
+  commit();
+  prepareSamples();
 })();
 </script>
 </body>
