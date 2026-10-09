@@ -101,6 +101,9 @@
       padding: 24px 16px 56px;
     }
 
+    /* 二択を素早く続けて押したときに、ダブルタップで画面が拡大されないようにする（ピンチでの拡大はできる） */
+    html, button { touch-action: manipulation; }
+
     button { font: inherit; }
 
     button:focus-visible {
