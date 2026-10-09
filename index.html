@@ -2356,7 +2356,7 @@ function makeItemMeta(id, ranking) {
   const image = state.images[id];
   const meta = document.createElement("div");
   meta.className = "meta";
-  meta.textContent = image.placementLeft > 0 ? placementText(image) : `${powerText(id, ranking)}・比較${image.comparisons}回`;
+  meta.textContent = image.placementLeft > 0 ? placementText(image) : `強さ ${ranking.toPower(image.rating)}`;
   return meta;
 }
 
