@@ -1756,8 +1756,15 @@ function toggleLock(id) {
     const toTop = distTop <= distBottom;
     setLock(toTop ? order.slice(0, pos + 1) : order.slice(pos, n), toTop ? "top" : "bottom");
   } else if (order.every(isLocked)) {
-    // 全画像がロック中：押した画像から近いほうの端までを解除（同じ距離なら下側）
-    setLock(distTop < distBottom ? order.slice(0, pos + 1) : order.slice(pos, n), null);
+    // 全画像がロック中：押した画像から近いほうの端までを解除する（同じ距離なら下側）。
+    // 残った画像は、解除した範囲と反対側の端のロックにする。こうすると解除の前後で順位が変わらない
+    if (distTop < distBottom) {
+      setLock(order.slice(0, pos + 1), null);
+      setLock(order.slice(pos + 1), "bottom");
+    } else {
+      setLock(order.slice(pos), null);
+      setLock(order.slice(0, pos), "top");
+    }
   } else {
     // 通常の解除：押した画像を含むロックの塊のうち、ロックしていない範囲に接する内側の端から、押した画像までを解除
     let start = pos, end = pos;
