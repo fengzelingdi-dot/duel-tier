@@ -2042,8 +2042,9 @@ async function drawSheetImages(ctx, rows, ranking, { cellH, titleH }) {
 }
 
 /* マス目の線。太さ1pxで、座標を0.5pxずらして引くことで、線がぼやけたり隣のマスにはみ出したりしないようにする。
-   画像の側はすべての行の境目に引き、見出しの側は見出しの切れ目と上下の端だけに引く */
-function drawSheetGrid(ctx, rows, { cellH, titleH, width, height }) {
+   横の線は、画像の側はすべての行の境目に引き、見出しの側は見出しの切れ目と上下の端だけに引く。
+   縦の線は行ごとに引き、左右どちらも空のマスの間には引かない */
+function drawSheetGrid(ctx, rows, { cellH, titleH, width }) {
   const line = (x1, y1, x2, y2) => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); };
   ctx.strokeStyle = pal("ash-500");
   ctx.lineWidth = 1;
@@ -2052,10 +2053,15 @@ function drawSheetGrid(ctx, rows, { cellH, titleH, width, height }) {
     line(SHEET_LABEL_W, y, width, y);
     if (r === 0 || r === rows.length || rows[r].groupStart) line(0, y, SHEET_LABEL_W, y);
   }
-  for (let col = 0; col <= SHEET_COLS; col++) {
-    const x = SHEET_LABEL_W + col * SHEET_CELL_W + 0.5;
-    line(x, titleH, x, height);
-  }
+  rows.forEach((row, r) => {
+    const y = titleH + r * cellH;
+    for (let col = 0; col <= SHEET_COLS; col++) {
+      const bothEmpty = col > 0 && col < SHEET_COLS && col - 1 >= row.ids.length;
+      if (bothEmpty) continue;
+      const x = SHEET_LABEL_W + col * SHEET_CELL_W + 0.5;
+      line(x, y, x, y + cellH);
+    }
+  });
 }
 
 /* シートを作って保存する。tierNames は { Tier番号: 名前 }。名前の無い番号は「Tier N」になる */
